@@ -1,4 +1,4 @@
-<header style="background:#0b1e3d;height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
+<header style="background:linear-gradient(180deg,#10264a 0%,#0b1e3d 100%);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10;box-shadow:0 4px 18px rgba(0,0,0,0.35);border-bottom:1px solid rgba(255,255,255,0.06);">
     <div style="display:flex;align-items:center;flex-shrink:0;">
         <button type="button" onclick="toggleNav()" style="cursor:pointer;background:none;border:none;padding:0;"><img src="{{ asset('images/nexora-banner.png') }}" alt="Nexora logo" style="height:55px; width:auto;"></button>
     </div>

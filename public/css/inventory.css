@@ -41,6 +41,7 @@
 .sidenav a.nav-item:hover:not(.active) {
   background-color: rgba(255, 255, 255, 0.08);
   color: #ffffff;
+  transform: translateX(2px);
 }
 
 /* Active state (The highlighted Dashboard) */
@@ -48,6 +49,7 @@
   background-color: #ffffff;
   color: #0b1e3d; /* Dark blue text and icon */
   font-weight: 600;
+  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.55);
 }
 
 /* Hide accordion content by default and animate height */
@@ -120,15 +122,28 @@
 }
 
 .stock-table tbody tr:nth-child(even) {
-    background-color: #e2e8f0; /* Light gray-blue for even rows */
+    background-color: #eef2f8; /* Soft neutral tint for even rows */
 }
 
 .stock-table tbody tr:nth-child(odd) {
     background-color: #ffffff; /* White for odd rows */
 }
 .stock-table thead {
-    background-color: #1b3a6b; /* Dark blue for header */
+    background: linear-gradient(180deg, #224680 0%, #1b3a6b 100%); /* Dark blue header with subtle depth */
     color: #ffffff; /* White text for header */
+}
+
+.stock-table th {
+    letter-spacing: 0.4px;
+}
+
+/* Smooth, legible row hover across every list page */
+.stock-table tbody tr {
+    transition: background-color 0.18s ease;
+}
+
+.stock-table tbody tr:hover {
+    background-color: #dce7f5;
 }
 
 
@@ -226,6 +241,24 @@
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-search {
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-search:focus-within {
+  background: #eaeff6;
+  box-shadow: 0 0 0 3px rgba(74, 158, 232, 0.20);
+}
+
+.filter-select:hover {
+  background: #d7dfea;
+}
+
+.filter-select:focus {
+  box-shadow: 0 0 0 3px rgba(74, 158, 232, 0.20);
 }
 
 /* Table wrapper */
@@ -240,14 +273,37 @@
   border-radius: 20px;
   overflow: hidden;
   min-width: 0;
+  border: 1px solid rgba(15, 35, 70, 0.06);
+  box-shadow: 0 1px 2px rgba(11, 30, 61, 0.05), 0 18px 40px -28px rgba(11, 30, 61, 0.35);
+  transition: box-shadow 0.28s ease;
+}
+
+.content-card:hover {
+  box-shadow: 0 2px 6px rgba(11, 30, 61, 0.07), 0 26px 52px -26px rgba(11, 30, 61, 0.45);
 }
 
 /* Dark stat card shell */
 .stat-card {
-  background: #0b1e3d;
+  background: linear-gradient(160deg, #12294c 0%, #0b1e3d 58%, #091a34 100%);
   padding: 20px;
   border-radius: 20px;
   min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20), 0 20px 44px -26px rgba(0, 0, 0, 0.75);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.24), 0 28px 56px -24px rgba(0, 0, 0, 0.80);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Muted, well-spaced KPI labels */
+.stat-card > p:first-child {
+  color: rgba(226, 232, 240, 0.74);
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 /* Section heading */
@@ -255,8 +311,22 @@
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 15px;
-  color: #000000;
+  color: #0b1e3d;
   padding: 20px 20px 0 20px;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Subtle accent tick that gives headings rhythm without clutter */
+.section-heading::before {
+  content: "";
+  width: 4px;
+  height: 15px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #4a9ee8, #1b6fc8);
+  flex-shrink: 0;
 }
 
 /* =========================================================
@@ -669,6 +739,19 @@
 
 .items-stretch {
   align-items: stretch;
+}
+
+/* =========================================================
+   Micro-interactions on header controls
+   ========================================================= */
+
+#profileTrigger {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+#profileTrigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(74, 158, 232, 0.25);
 }
 
 

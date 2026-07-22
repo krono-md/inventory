@@ -11,31 +11,59 @@
         @stack('head')
         <style>
             *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: 'Inter', sans-serif; background: #132b52; color: #fff; min-height: 100vh; }
-            ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #0b1e3d; } ::-webkit-scrollbar-thumb { background: #1b3a6b; border-radius: 4px; }
+            body {
+                font-family: 'Inter', sans-serif;
+                background:
+                    radial-gradient(1100px 620px at 8% -8%, rgba(74, 158, 232, 0.12), transparent 58%),
+                    radial-gradient(900px 560px at 108% 4%, rgba(45, 212, 168, 0.07), transparent 55%),
+                    #122a51;
+                background-attachment: fixed;
+                color: #fff;
+                min-height: 100vh;
+                line-height: 1.5;
+                letter-spacing: 0.1px;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+            }
+            ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #0b1e3d; } ::-webkit-scrollbar-thumb { background: #1b3a6b; border-radius: 4px; transition: background 0.2s ease; } ::-webkit-scrollbar-thumb:hover { background: #2a4f8f; }
 
             /* Nexora modal system */
             .nexora-modal-overlay {
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.6);
+                background: rgba(6, 16, 34, 0.62);
+                backdrop-filter: blur(3px);
                 z-index: 20;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                animation: nexoraOverlayIn 0.2s ease-out;
             }
 
             .nexora-modal {
-                background: #132B52;
-                border-radius: 12px;
+                background: linear-gradient(160deg, #16305a 0%, #132B52 55%, #0f2447 100%);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 16px;
                 padding: 28px;
                 width: 100%;
                 max-width: 720px;
                 margin: 16px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+                box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.60);
                 color: #fff;
                 position: relative;
                 overflow: hidden;
+                animation: nexoraModalIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+
+            @keyframes nexoraOverlayIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            @keyframes nexoraModalIn {
+                from { opacity: 0; transform: translateY(12px) scale(0.98); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
             }
 
             .nexora-modal-logo {
@@ -109,11 +137,14 @@
                 color: #0f172a;
                 font-family: 'Inter', sans-serif;
                 outline: none;
+                transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
             }
 
             .nexora-modal-input:focus,
             .nexora-modal-select:focus {
                 border-color: #1B6FC8;
+                background: #ffffff;
+                box-shadow: 0 0 0 3px rgba(27, 111, 200, 0.18);
             }
 
             .nexora-modal-input:disabled {
@@ -138,21 +169,39 @@
             .nexora-modal-btn-secondary {
                 background: transparent;
                 color: #fff;
-                border: 1px solid #fff;
-                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.7);
+                border-radius: 10px;
                 padding: 10px 18px;
                 font-weight: 600;
                 cursor: pointer;
+                transition: background-color 0.16s ease, border-color 0.16s ease;
+            }
+
+            .nexora-modal-btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.10);
+                border-color: #fff;
             }
 
             .nexora-modal-btn-primary {
                 background: #fff;
                 color: #1B6FC8;
                 border: 1px solid #000;
-                border-radius: 8px;
+                border-radius: 10px;
                 padding: 10px 18px;
                 font-weight: 600;
                 cursor: pointer;
+                box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.45);
+                transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+            }
+
+            .nexora-modal-btn-primary:hover {
+                transform: translateY(-1px);
+                background: #f4f8ff;
+                box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.5);
+            }
+
+            .nexora-modal-btn-primary:active {
+                transform: translateY(0);
             }
 
         </style>
