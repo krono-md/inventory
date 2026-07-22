@@ -109,7 +109,7 @@ class StockReceivingController extends Controller
 
         $historySuppliers = $this->procurementDeliveriesQuery()
             ->whereIn('deliveries.shipment_number', $history->pluck('shipment_number')->filter()->unique())
-            ->pluck('suppliers.name', 'deliveries.shipment_number');
+            ->pluck('supplier_name', 'deliveries.shipment_number');
 
         return view('inventory::stock-receiving', [
             'deliveries' => $deliveries,
