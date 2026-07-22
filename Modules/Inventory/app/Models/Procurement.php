@@ -42,6 +42,7 @@ class Procurement extends Model
             return null;
         }
 
+        $supplierProduct = null;
         $sku = null;
 
         if ($poItem->supplier_product_id) {
@@ -74,11 +75,14 @@ class Procurement extends Model
 
         $cleanName = trim(preg_replace('/\s*@\s*.*$/', '', $poItem->name));
 
+        $categories = $supplierProduct?->categories ?? null;
+
         return (object) [
             'item_name' => $cleanName,
             'qty' => $poItem->qty,
             'unit_price' => $poItem->unit_price,
             'sku' => $sku,
+            'categories' => $categories,
         ];
     }
 }

@@ -21,15 +21,11 @@ class StockReceivingController extends Controller
     private function procurementDeliveriesQuery()
     {
         $schema = Schema::connection('procurement');
-        $hasPurchaseOrderWarehouse = $schema->hasColumn('purchase_orders', 'warehouse_id');
-        $hasSupplierWarehouse = $schema->hasColumn('suppliers', 'warehouse_id');
+        $hasDeliverToWarehouse = $schema->hasColumn('deliveries', 'deliver_to_warehouse');
 
-        $destinationWarehouse = match (true) {
-            $hasPurchaseOrderWarehouse && $hasSupplierWarehouse => DB::raw('COALESCE(purchase_orders.warehouse_id, suppliers.warehouse_id) as destination_warehouse_id'),
-            $hasPurchaseOrderWarehouse => DB::raw('purchase_orders.warehouse_id as destination_warehouse_id'),
-            $hasSupplierWarehouse => DB::raw('suppliers.warehouse_id as destination_warehouse_id'),
-            default => DB::raw('NULL as destination_warehouse_id'),
-        };
+        $destinationWarehouse = $hasDeliverToWarehouse
+            ? DB::raw('deliveries.deliver_to_warehouse as destination_warehouse_id')
+            : DB::raw('NULL as destination_warehouse_id');
 
         $query = Procurement::query()
             ->leftJoin('suppliers', 'deliveries.supplier_id', '=', 'suppliers.id')
@@ -159,14 +155,15 @@ class StockReceivingController extends Controller
             $item = Item::where('sku', $product->sku)->first();
 
             if (!$item) {
-                $defaultCategory = Category::query()->firstOrCreate([
-                    'name' => 'Uncategorized Incoming Goods',
+                $categoryName = $product->categories ?? 'Uncategorized Incoming Goods';
+                $category = Category::query()->firstOrCreate([
+                    'name' => $categoryName,
                 ]);
 
                 $item = Item::create([
                     'sku' => $product->sku,
                     'name' => $product->item_name,
-                    'category_id' => $defaultCategory->id,
+                    'category_id' => $category->id,
                     'unit_cost' => $product->unit_price,
                 ]);
             }
