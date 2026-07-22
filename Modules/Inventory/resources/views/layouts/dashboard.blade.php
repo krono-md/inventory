@@ -38,6 +38,14 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+            }
+
+            /* Entry animations run only when the modal is opened (.open),
+               never on page load. The overlay is always present in the DOM
+               and hidden via each page's `opacity: 0` rule; putting the
+               animation on the base element made it override that hidden
+               state on every navigation, causing a brief modal flash. */
+            .nexora-modal-overlay.open {
                 animation: nexoraOverlayIn 0.2s ease-out;
             }
 
@@ -53,6 +61,9 @@
                 color: #fff;
                 position: relative;
                 overflow: hidden;
+            }
+
+            .nexora-modal-overlay.open .nexora-modal {
                 animation: nexoraModalIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
             }
 

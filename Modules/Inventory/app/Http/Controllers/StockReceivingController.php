@@ -22,10 +22,15 @@ class StockReceivingController extends Controller
     {
         $schema = Schema::connection('procurement');
         $hasDeliverToWarehouse = $schema->hasColumn('deliveries', 'deliver_to_warehouse');
+        $hasCategory = $schema->hasColumn('supplier_products', 'categories');
 
         $destinationWarehouse = $hasDeliverToWarehouse
             ? DB::raw('deliveries.deliver_to_warehouse as destination_warehouse_id')
             : DB::raw('NULL as destination_warehouse_id');
+
+        $poCategory = $hasCategory
+            ? DB::raw('(SELECT sp.categories FROM purchase_order_items poi LEFT JOIN supplier_products sp ON sp.id = poi.supplier_product_id WHERE poi.purchase_order_id = deliveries.purchase_order_id LIMIT 1) as po_category')
+            : DB::raw('NULL as po_category');
 
         $query = Procurement::query()
             ->leftJoin('suppliers', 'deliveries.supplier_id', '=', 'suppliers.id')
@@ -33,7 +38,8 @@ class StockReceivingController extends Controller
             ->select(
                 'deliveries.*',
                 'suppliers.name as supplier_name',
-                $destinationWarehouse
+                $destinationWarehouse,
+                $poCategory
             );
 
         if (! (config('nexora.root_admin_module_testing') && auth()->user()?->role === 'root_admin')) {

@@ -282,12 +282,10 @@
         document.getElementById('edit_capacity_units').value = capacity;
         document.getElementById('edit_address').value = address;
         document.getElementById('edit_status').value = status;
-        editModal.style.opacity = '1';
-        editModal.style.pointerEvents = 'auto';
+        editModal.classList.add('open');
     }
     function closeEditModal() {
-        editModal.style.opacity = '0';
-        editModal.style.pointerEvents = 'none';
+        editModal.classList.remove('open');
     }
     editModal.addEventListener('click', function(e) { if (e.target === this) closeEditModal(); });
 
@@ -311,8 +309,7 @@
         var editId = params.get('edit');
         if (editId) {
             editForm.action = '/warehouse/' + editId;
-            editModal.style.opacity = '1';
-            editModal.style.pointerEvents = 'auto';
+            editModal.classList.add('open');
         }
     })();
 </script>
