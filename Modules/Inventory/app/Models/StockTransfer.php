@@ -22,7 +22,6 @@ class StockTransfer extends Model
         'quantity',
         'status',
         'requested_by',
-        'requested_by_user_id',
         'approved_by',
         'approved_at',
         'notes',
@@ -55,7 +54,7 @@ class StockTransfer extends Model
 
     public function requester(): BelongsTo
     {
-        return $this->belongsTo(\Modules\HR\Models\Employee::class, 'requested_by');
+        return $this->belongsTo(\App\Models\User::class, 'requested_by');
     }
 
     public function getReferenceAttribute(): string

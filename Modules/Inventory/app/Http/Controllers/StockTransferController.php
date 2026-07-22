@@ -73,9 +73,9 @@ class StockTransferController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'item_id' => 'required|exists:items,id',
-            'from_warehouse_id' => ['required', Rule::exists('warehouses', 'id')->whereNull('deleted_at')->where('status', 'active')],
-            'to_warehouse_id' => ['required', Rule::exists('warehouses', 'id')->whereNull('deleted_at')->where('status', 'active'), 'different:from_warehouse_id'],
+            'item_id' => 'required|exists:inventory.items,id',
+            'from_warehouse_id' => ['required', Rule::exists('inventory.warehouses', 'id')->whereNull('deleted_at')->where('status', 'active')],
+            'to_warehouse_id' => ['required', Rule::exists('inventory.warehouses', 'id')->whereNull('deleted_at')->where('status', 'active'), 'different:from_warehouse_id'],
             'quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string',
         ]);
@@ -100,8 +100,7 @@ class StockTransferController extends Controller
         }
 
         $validated['status'] = 'pending';
-        $validated['requested_by'] = session('employee_id');
-        $validated['requested_by_user_id'] = session('employee_id');
+        $validated['requested_by'] = auth()->id();
 
         StockTransfer::create($validated);
 
@@ -114,7 +113,7 @@ class StockTransferController extends Controller
             return back()->withErrors(["trf_action_{$transfer->id}" => 'This transfer has already been processed.']);
         }
 
-        if ($transfer->requested_by_user_id === session('employee_id')) {
+        if ($transfer->requested_by === auth()->id()) {
             return back()->withErrors(["trf_action_{$transfer->id}" => 'You cannot approve your own transfer request.']);
         }
 
@@ -236,7 +235,7 @@ class StockTransferController extends Controller
                 return 'This transfer has already been processed.';
             }
 
-            if ($transfer->requested_by_user_id === session('employee_id')) {
+            if ($transfer->requested_by === auth()->id()) {
                 return 'You cannot reject your own transfer request.';
             }
 
@@ -261,7 +260,7 @@ class StockTransferController extends Controller
                 return 'Only pending transfers can be cancelled.';
             }
 
-            if ($transfer->requested_by_user_id !== session('employee_id')) {
+            if ($transfer->requested_by !== auth()->id()) {
                 return 'You can only cancel your own transfer requests.';
             }
 

@@ -40,7 +40,7 @@ class StockAdjustment extends Model
 
     public function requester(): BelongsTo
     {
-        return $this->belongsTo(\Modules\HR\Models\Employee::class, 'requested_by');
+        return $this->belongsTo(\App\Models\User::class, 'requested_by');
     }
 
     public function approver(): BelongsTo

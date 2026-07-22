@@ -106,11 +106,11 @@ class ItemCatalogController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'sku' => 'required|string|max:50|unique:items,sku',
+            'sku' => 'required|string|max:50|unique:inventory.items,sku',
             'name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'required|exists:inventory.categories,id',
             'unit_cost' => 'required|numeric|min:0',
-            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'warehouse_id' => 'nullable|exists:inventory.warehouses,id',
             'initial_stock' => 'nullable|integer|min:0',
             'reorder_threshold' => 'nullable|integer|min:0',
         ]);

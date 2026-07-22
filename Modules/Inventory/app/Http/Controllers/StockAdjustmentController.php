@@ -81,8 +81,8 @@ class StockAdjustmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'item_id' => 'required|exists:items,id',
-            'warehouse_id' => ['required', Rule::exists('warehouses', 'id')->whereNull('deleted_at')->where('status', 'active')],
+            'item_id' => 'required|exists:inventory.items,id',
+            'warehouse_id' => ['required', Rule::exists('inventory.warehouses', 'id')->whereNull('deleted_at')->where('status', 'active')],
             'type' => 'required|in:increase,decrease',
             'quantity' => 'required|integer|min:1',
             'reason' => 'required|in:damage,expired,recount,theft,correction',
@@ -110,7 +110,7 @@ class StockAdjustmentController extends Controller
         }
 
         $validated['status'] = 'pending';
-        $validated['requested_by'] = session('employee_id');
+        $validated['requested_by'] = auth()->id();
         StockAdjustment::create($validated);
 
         return back()->with('success', 'Adjustment request submitted for approval.');
@@ -122,7 +122,7 @@ class StockAdjustmentController extends Controller
             return back()->withErrors(["adj_action_{$adjustment->id}" => 'This adjustment has already been processed.']);
         }
 
-        if ($adjustment->requested_by === session('employee_id')) {
+        if ($adjustment->requested_by === auth()->id()) {
             return back()->withErrors(["adj_action_{$adjustment->id}" => 'You cannot approve your own adjustment request.']);
         }
 
@@ -212,7 +212,7 @@ class StockAdjustmentController extends Controller
                 return 'This adjustment has already been processed.';
             }
 
-            if ($adjustment->requested_by === session('employee_id')) {
+            if ($adjustment->requested_by === auth()->id()) {
                 return 'You cannot reject your own adjustment request.';
             }
 
@@ -237,7 +237,7 @@ class StockAdjustmentController extends Controller
                 return 'Only pending adjustments can be cancelled.';
             }
 
-            if ($adjustment->requested_by !== session('employee_id')) {
+            if ($adjustment->requested_by !== auth()->id()) {
                 return 'You can only cancel your own adjustment requests.';
             }
 
