@@ -11,13 +11,23 @@
     .status-rejected { background: #fee2e2; color: #991b1b; }
     .status-cancelled { background: #e2e8f0; color: #64748b; }
 
-    .priority-low { background: #dcfce7; color: #166534; }
-    .priority-medium { background: #fef9c3; color: #854d0e; }
-    .priority-high { background: #fee2e2; color: #991b1b; }
-    .priority-pill { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .type-restock { background: #dbeafe; color: #1e40af; }
+    .type-replacement { background: #fef9c3; color: #854d0e; }
+    .type-pill { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .stock-status { font-size: 11px; font-weight: 600; margin-left: 6px; padding: 2px 6px; border-radius: 4px; }
+    .stock-out { color: #991b1b; background: #fee2e2; }
+    .stock-low { color: #854d0e; background: #fef9c3; }
+
+    .type-toggle { display: flex; gap: 0; background: #e2e8f0; border-radius: 8px; padding: 3px; }
+    .type-toggle button { padding: 6px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; background: transparent; color: #64748b; transition: all 0.15s; flex: 1; }
+    .type-toggle button.active { background: #0b1e3d; color: #fff; }
 
     #requestModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
     #requestModal.open { opacity: 1; pointer-events: auto; }
+
+    .restock-fields, .replacement-fields { display: none; }
+    .restock-fields.active, .replacement-fields.active { display: block; }
 </style>
 @endpush
 
@@ -85,17 +95,28 @@
                 <thead>
                     <tr>
                         <th>REQ #</th>
+                        <th>TYPE</th>
                         <th>ITEM</th>
                         <th class="col-r">QTY</th>
                         <th>STATUS</th>
-                        <th>PRIORITY</th>
                         <th>DATE</th>
                     </tr>
                 </thead>
                 <tbody id="requestsBody">
+                    @php
+                        $reqType = fn($notes) => str_contains($notes ?? '', '[type:restock]') ? 'Restock' : (str_contains($notes ?? '', '[type:replacement]') ? 'Replacement' : '—');
+                    @endphp
                     @forelse ($requests as $req)
                         <tr class="req-row" data-status="{{ strtolower($req->status ?? 'pending') }}" data-search="{{ strtolower($req->req_id . ' ' . $req->part_name) }}">
                             <td class="cell-strong" style="font-size:11px;">{{ $req->req_id }}</td>
+                            <td>
+                                @php $t = $reqType($req->notes); @endphp
+                                @if($t !== '—')
+                                    <span class="type-pill type-{{ strtolower($t) }}">{{ $t }}</span>
+                                @else
+                                    <span style="color:#94a3b8;">—</span>
+                                @endif
+                            </td>
                             <td>{{ $req->part_name }}</td>
                             <td class="col-r cell-strong">{{ $req->quantity }}</td>
                             <td>
@@ -111,18 +132,6 @@
                                     };
                                 @endphp
                                 <span class="status-badge {{ $bc }}">{{ $req->status ?? 'Pending' }}</span>
-                            </td>
-                            <td>
-                                @php
-                                    $p = strtolower($req->priority ?? 'medium');
-                                    $pc = match($p) {
-                                        'low' => 'priority-low',
-                                        'medium' => 'priority-medium',
-                                        'high' => 'priority-high',
-                                        default => 'priority-medium',
-                                    };
-                                @endphp
-                                <span class="priority-pill {{ $pc }}">{{ $req->priority ?? 'Medium' }}</span>
                             </td>
                             <td class="cell-muted" style="font-size:12px;">{{ \Carbon\Carbon::parse($req->date_requested)->format('M d, Y') }}</td>
                         </tr>
@@ -151,32 +160,61 @@
         </div>
         <form method="POST" action="{{ route('inventory.requests.store') }}">
             @csrf
-            <div class="nexora-modal-form">
-                <div style="grid-column:1/-1;">
-                    <label class="nexora-modal-label">Defect Item</label>
-                    <select class="nexora-modal-input" id="defectItemSelect" onchange="onDefectSelect(this)">
-                        <option value="">Select a defect item...</option>
-                        @foreach ($defectItems as $item)
-                            <option value="{{ $item->part_name }}">{{ $item->part_name }}@if($item->quantity > 1) (x{{ $item->quantity }})@endif@if($item->source) — {{ $item->source }}@endif</option>
-                        @endforeach
-                        <option value="__other__">Other (type manually)</option>
-                    </select>
-                    <input type="text" id="modalPartName" value="{{ old('part_name') }}" placeholder="Type part name..." style="display:none;margin-top:8px;width:100%;padding:10px 12px;border:1px solid #d1d9e6;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;color:#0f172a;box-sizing:border-box;">
-                    @error('part_name')<p class="nexora-modal-error">{{ $message }}</p>@enderror
+            <input type="hidden" name="type" id="requestType" value="restock">
+            <input type="hidden" name="item_id" id="selectedItemId" value="">
+            <input type="hidden" name="defect_id" id="selectedDefectId" value="">
+
+            <div style="padding:16px 20px 0 20px;">
+                <div class="type-toggle">
+                    <button type="button" class="active" onclick="setRequestType('restock')" id="typeRestockBtn">Restock</button>
+                    <button type="button" onclick="setRequestType('replacement')" id="typeReplacementBtn">Replacement</button>
                 </div>
+            </div>
+
+            <div class="nexora-modal-form" style="margin-top:0;">
+
+                <div style="grid-column:1/-1;">
+                    <label class="nexora-modal-label">Item</label>
+
+                    {{-- Restock fields --}}
+                    <div class="restock-fields active" id="restockFields">
+                        <select class="nexora-modal-input" id="restockItemSelect" onchange="onRestockSelect(this)">
+                            <option value="">Select an item...</option>
+                            <optgroup label="— Out of Stock —">
+                                @foreach ($lowStockItems as $item)
+                                    @if($item['status'] === 'Out of Stock')
+                                        <option value="{{ $item['id'] }}" data-name="{{ $item['name'] }}">{{ $item['name'] }} ({{ $item['sku'] }}) <span class="stock-status stock-out">0 available</span></option>
+                                    @endif
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="— Low Stock —">
+                                @foreach ($lowStockItems as $item)
+                                    @if($item['status'] === 'Low Stock')
+                                        <option value="{{ $item['id'] }}" data-name="{{ $item['name'] }}">{{ $item['name'] }} ({{ $item['sku'] }}) — {{ $item['total_available'] }} available</option>
+                                    @endif
+                                @endforeach
+                            </optgroup>
+                        </select>
+                        @error('part_name')<p class="nexora-modal-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    {{-- Replacement fields --}}
+                    <div class="replacement-fields" id="replacementFields">
+                        <select class="nexora-modal-input" id="defectItemSelect" onchange="onDefectSelect(this)">
+                            <option value="">Select a defect item...</option>
+                            @foreach ($defectItems as $item)
+                                <option value="{{ $item->id }}" data-name="{{ $item->part_name }}">{{ $item->part_name }}@if($item->quantity > 1) (x{{ $item->quantity }})@endif@if($item->source) — {{ $item->source }}@endif</option>
+                            @endforeach
+                            <option value="__other__">Other (type manually)</option>
+                        </select>
+                        <input type="text" name="part_name" id="modalPartName" value="{{ old('part_name') }}" placeholder="Type part name..." style="display:none;margin-top:8px;width:100%;padding:10px 12px;border:1px solid #d1d9e6;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;color:#0f172a;box-sizing:border-box;">
+                    </div>
+                </div>
+
                 <div>
                     <label class="nexora-modal-label">Quantity</label>
-                    <input type="number" name="quantity" value="{{ old('quantity', 1) }}" required min="1" class="nexora-modal-input">
+                    <input type="number" name="quantity" id="requestQty" value="{{ old('quantity', 1) }}" required min="1" class="nexora-modal-input">
                     @error('quantity')<p class="nexora-modal-error">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="nexora-modal-label">Priority</label>
-                    <select name="priority" required class="nexora-modal-input">
-                        <option value="Low" {{ old('priority') === 'Low' ? 'selected' : '' }}>Low</option>
-                        <option value="Medium" {{ old('priority', 'Medium') === 'Medium' ? 'selected' : '' }}>Medium</option>
-                        <option value="High" {{ old('priority') === 'High' ? 'selected' : '' }}>High</option>
-                    </select>
-                    @error('priority')<p class="nexora-modal-error">{{ $message }}</p>@enderror
                 </div>
                 <div style="grid-column:1/-1;">
                     <label class="nexora-modal-label">Notes</label>
@@ -196,27 +234,57 @@
 </div>
 
 <script>
+    var lowStockItems = @json($lowStockItems);
+
+    function setRequestType(type) {
+        document.getElementById('requestType').value = type;
+
+        document.getElementById('typeRestockBtn').classList.toggle('active', type === 'restock');
+        document.getElementById('typeReplacementBtn').classList.toggle('active', type === 'replacement');
+
+        document.getElementById('restockFields').classList.toggle('active', type === 'restock');
+        document.getElementById('replacementFields').classList.toggle('active', type === 'replacement');
+
+        document.getElementById('selectedItemId').value = '';
+        document.getElementById('selectedDefectId').value = '';
+    }
+
+    function onRestockSelect(select) {
+        var option = select.options[select.selectedIndex];
+        if (option && option.value) {
+            document.getElementById('selectedItemId').value = option.value;
+            document.getElementById('selectedDefectId').value = '';
+            var qty = document.getElementById('requestQty');
+            if (!qty.value || qty.value == 1) qty.value = 1;
+        }
+    }
+
     function onDefectSelect(select) {
         var textInput = document.getElementById('modalPartName');
+        var selectedId = document.getElementById('selectedDefectId');
+
         if (select.value === '__other__') {
             textInput.style.display = 'block';
             textInput.value = '';
             textInput.focus();
-            textInput.setAttribute('required', 'required');
-            textInput.setAttribute('name', 'part_name');
-            select.removeAttribute('name');
-            select.removeAttribute('required');
+            selectedId.value = '';
         } else if (select.value !== '') {
             textInput.style.display = 'none';
-            textInput.removeAttribute('required');
-            textInput.removeAttribute('name');
-            select.setAttribute('name', 'part_name');
-            select.setAttribute('required', 'required');
+            selectedId.value = select.value;
+            document.getElementById('selectedItemId').value = '';
+
+            var option = select.options[select.selectedIndex];
+            var qty = document.getElementById('requestQty');
+            if (!qty.value || qty.value == 1) qty.value = 1;
+        } else {
+            textInput.style.display = 'none';
+            selectedId.value = '';
         }
     }
 
     @if(old('part_name') && !$defectItems->pluck('part_name')->contains(old('part_name')))
         (function() {
+            setRequestType('replacement');
             var s = document.getElementById('defectItemSelect');
             s.value = '__other__';
             onDefectSelect(s);
@@ -231,6 +299,10 @@
     function closeRequestModal() {
         document.getElementById('requestModal').classList.remove('open');
         document.getElementById('requestModal').querySelector('form').reset();
+        document.getElementById('restockFields').classList.add('active');
+        document.getElementById('replacementFields').classList.remove('active');
+        document.getElementById('typeRestockBtn').classList.add('active');
+        document.getElementById('typeReplacementBtn').classList.remove('active');
     }
 
     document.getElementById('requestModal').addEventListener('click', function (e) {
