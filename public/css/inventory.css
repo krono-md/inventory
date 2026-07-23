@@ -12,16 +12,18 @@
   /* Add the rounded corners seen in the image */
   border-radius: 25px;
   /* Changed from black (#111) to a dark blue that fits your app's theme */
-  background-color: #0b1e3d; 
-  overflow-x: hidden; 
+  background: linear-gradient(180deg, #0d2247 0%, #0b1e3d 62%, #091a34 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-x: hidden;
   /* Reduced top padding since it's no longer sitting under a top edge */
   padding-top: 50px; 
   transition: 0.5s; 
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 1);
+  box-shadow: 0 18px 44px -22px rgba(0, 0, 0, 0.7);
 }
 
 /* Base styling for all sidebar items */
 .sidenav a.nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -50,6 +52,19 @@
   color: #0b1e3d; /* Dark blue text and icon */
   font-weight: 600;
   box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.55);
+}
+
+/* Brand accent rail marking the current top-level page */
+.sidenav a.nav-item.active:not(.nested-item)::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #4a9ee8, #1b6fc8);
 }
 
 /* Hide accordion content by default and animate height */
@@ -92,6 +107,19 @@
   display: flex;
   flex-direction: column;
   margin-top: 4px;
+  position: relative;
+}
+
+/* Subtle guide line grouping the sub-menu items */
+.nav-nested::before {
+  content: "";
+  position: absolute;
+  left: 32px;
+  top: 4px;
+  bottom: 4px;
+  width: 1.5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Extra indentation and slightly smaller text for sub-menus */
@@ -714,6 +742,66 @@
     gap: 24px;
   }
 }
+
+/* =========================================================
+   Inventory data-page system (.inv-page)
+   Reusable KPI tiles, data panel, filter toolbar, and data grid
+   shared across the Inventory list pages. Columns are centered
+   to match the module's established look.
+   ========================================================= */
+
+/* KPI tiles */
+.inv-page .kpi-row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+@media (max-width:900px){ .inv-page .kpi-row{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:520px){ .inv-page .kpi-row{ grid-template-columns:1fr; } }
+/* 3-up KPI layout for pages with three metrics */
+.inv-page .kpi-row.cols-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media (max-width:820px){ .inv-page .kpi-row.cols-3{ grid-template-columns:1fr; } }
+
+.inv-page .kpi-tile { position:relative; overflow:hidden; background:linear-gradient(160deg,#123156 0%,#0d2547 100%); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px 18px; box-shadow:0 8px 22px -14px rgba(0,0,0,0.7); }
+.inv-page .kpi-tile::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent,#4a9ee8); }
+.inv-page .kpi-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.inv-page .kpi-label { font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#93a7c6; white-space:nowrap; }
+.inv-page .kpi-icon { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.inv-page .kpi-value { font-size:34px; font-weight:800; color:#fff; line-height:1; letter-spacing:-0.5px; }
+
+/* Data panel */
+.inv-page .data-panel { background:#fff; border-radius:16px; overflow:hidden; border:1px solid rgba(15,23,42,0.06); box-shadow:0 12px 34px -18px rgba(0,0,0,0.55); }
+.inv-page .panel-head { display:flex; align-items:center; gap:10px; padding:16px 18px 6px; flex-wrap:wrap; }
+.inv-page .panel-title { font-size:15px; font-weight:700; color:#0f2447; }
+.inv-page .panel-count { font-size:12px; font-weight:600; color:#3f5578; background:#eef2f8; padding:3px 10px; border-radius:999px; }
+.inv-page .panel-head-actions { margin-left:auto; display:flex; align-items:center; gap:8px; }
+
+/* Toolbar */
+.inv-page .data-toolbar { display:flex; align-items:center; gap:10px; padding:12px 18px 16px; flex-wrap:wrap; min-width:0; }
+.inv-page .tb-search { display:flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:9px; padding:8px 12px; flex:1; min-width:150px; transition:border-color 0.15s ease, box-shadow 0.15s ease; }
+.inv-page .tb-search:focus-within { border-color:#4a9ee8; box-shadow:0 0 0 3px rgba(74,158,232,0.15); }
+.inv-page .tb-search input { border:none; outline:none; background:transparent; font-family:'Inter',sans-serif; font-size:12.5px; color:#0f172a; width:100%; }
+.inv-page .tb-select { background:#f1f5f9; color:#0f172a; border:1px solid #e2e8f0; border-radius:9px; padding:8px 14px; font-size:12.5px; font-family:'Inter',sans-serif; cursor:pointer; outline:none; flex-shrink:0; transition:border-color 0.15s ease, background-color 0.15s ease; }
+.inv-page .tb-select:hover { border-color:#cbd5e1; background:#eef2f7; }
+.inv-page .tb-clear { background:#fff; color:#64748b; border:1px solid #e2e8f0; border-radius:9px; padding:8px 12px; font-size:12.5px; font-family:'Inter',sans-serif; text-decoration:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; flex-shrink:0; cursor:pointer; transition:color 0.15s ease, border-color 0.15s ease; }
+.inv-page .tb-clear:hover { color:#0f172a; border-color:#cbd5e1; }
+
+/* Data grid */
+.inv-page .data-grid { width:100%; border-collapse:collapse; }
+.inv-page .data-grid thead th { background:#13315c; color:#cdd9ee; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; padding:11px 14px; text-align:center; white-space:nowrap; }
+.inv-page .data-grid thead th .sort-icon { vertical-align:middle; margin-left:3px; }
+.inv-page .data-grid tbody td { padding:11px 14px; font-size:12.5px; color:#233247; border-bottom:1px solid #eef2f7; vertical-align:middle; text-align:center; }
+.inv-page .data-grid tbody tr:last-child td { border-bottom:none; }
+.inv-page .data-grid tbody tr:nth-child(even) { background:#f8fafc; }
+.inv-page .data-grid tbody tr:hover { background:#eef4fb; }
+.inv-page .data-grid .col-c, .inv-page .data-grid thead th.col-c { text-align:center; }
+/* numeric columns stay centered to match headers, but keep tabular figures so digits line up */
+.inv-page .data-grid .col-r, .inv-page .data-grid thead th.col-r { text-align:center; font-variant-numeric:tabular-nums; }
+.inv-page .cell-strong { font-weight:600; color:#0f2447; }
+.inv-page .cell-muted { color:#64748b; }
+.inv-page .empty-row td { text-align:center; padding:30px; color:#94a3b8; font-size:13px; }
+
+/* Badges */
+.inv-page .mv-badge { display:inline-block; padding:4px 14px; border-radius:999px; font-size:11px; font-weight:600; }
+.inv-page .mv-qty { display:inline-flex; align-items:center; justify-content:center; gap:4px; font-weight:600; }
+
+.inv-page .panel-foot { padding:10px 18px; border-top:1px solid #eef2f7; }
 
 /* Warehouse grid / list views */
 #warehouseContainer.grid {

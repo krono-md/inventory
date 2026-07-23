@@ -27,19 +27,35 @@
 @endpush
 
 @section('content')
+<div class="inv-page">
 <div class="responsive-grid-dashboard">
     <!-- Row 1: 3 stat cards + Critical Alerts -->
-    <div class="stat-card" style="align-self:start;">
-        <p style="font-size:15px; white-space: nowrap;">Total Items</p>
-        <p style="font-size:40px;font-weight:bold;">{{ number_format($totalItems) }}</p>
+    <div class="kpi-tile" style="--accent:#4a9ee8;align-self:start;">
+        <div class="kpi-head">
+            <span class="kpi-label">Total Items</span>
+            <span class="kpi-icon" style="background:rgba(74,158,232,0.15);color:#4a9ee8;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
+            </span>
+        </div>
+        <p class="kpi-value">{{ number_format($totalItems) }}</p>
     </div>
-    <div class="stat-card" style="align-self:start;">
-        <p style="font-size:15px; white-space: nowrap;">Total Stock Unit</p>
-        <p style="font-size:40px;font-weight:bold;">{{ number_format($totalStockUnits) }}</p>
+    <div class="kpi-tile" style="--accent:#2dd4a8;align-self:start;">
+        <div class="kpi-head">
+            <span class="kpi-label">Total Stock Unit</span>
+            <span class="kpi-icon" style="background:rgba(45,212,168,0.15);color:#2dd4a8;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
+            </span>
+        </div>
+        <p class="kpi-value">{{ number_format($totalStockUnits) }}</p>
     </div>
-    <div class="stat-card" style="align-self:start;">
-        <p style="font-size:15px; white-space: nowrap;">Low Stock Alerts</p>
-        <p style="font-size:40px;font-weight:bold;">{{ number_format($lowStockAlerts) }}</p>
+    <div class="kpi-tile" style="--accent:#f59e0b;align-self:start;">
+        <div class="kpi-head">
+            <span class="kpi-label">Low Stock Alerts</span>
+            <span class="kpi-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4m0 4h.01"/></svg>
+            </span>
+        </div>
+        <p class="kpi-value">{{ number_format($lowStockAlerts) }}</p>
     </div>
     <!-- Critical Alerts card: spans 2 rows -->
     <div class="stat-card" style="grid-row: span 2; display:flex; flex-direction:column; gap:12px; overflow-y:auto; max-height: 520px;">
@@ -104,15 +120,15 @@
     <div class="content-card span-4">
         <p class="section-heading">Recent Stock Movement</p>
         <div class="table-wrapper">
-            <table class="stock-table" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+            <table class="data-grid" style="width: 100%; table-layout: fixed;">
                 <thead>
-                    <tr style="background:#1b3a6b;">
-                        <th style="text-align: center; padding: 12px 8px; color: #ffffff; font-size:13px; font-weight:600;">TYPE</th>
-                        <th style="text-align: center; padding: 12px 8px; color: #ffffff; font-size:13px; font-weight:600;">ITEM NAME</th>
-                        <th style="text-align: center; padding: 12px 8px; color: #ffffff; font-size:13px; font-weight:600;">QUANTITY</th>
-                        <th style="text-align: center; padding: 12px 8px; color: #ffffff; font-size:13px; font-weight:600;">WAREHOUSE</th>
-                        <th style="text-align: center; padding: 12px 8px; color: #ffffff; font-size:13px; font-weight:600;">REFERENCE</th>
-                        <th style="text-align: center; padding: 12px 8px; color: #ffffff; font-size:13px; font-weight:600;">DATE & TIME</th>
+                    <tr>
+                        <th>TYPE</th>
+                        <th>ITEM NAME</th>
+                        <th class="col-r">QUANTITY</th>
+                        <th>WAREHOUSE</th>
+                        <th>REFERENCE</th>
+                        <th class="col-r">DATE &amp; TIME</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -179,6 +195,7 @@
             </table>
         </div>
     </div>
+</div>
 </div>
 @endsection
 

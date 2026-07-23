@@ -1,14 +1,18 @@
 @extends('inventory::layouts.dashboard')
 
-@section('title', 'Warehouse')
+@section('title', 'Warehouses')
 
 @push('styles')
 <style>
     .capacity-bar { height: 10px; border-radius: 9999px; background: linear-gradient(90deg, #ef4444 0%, #f0a93e 40%, #22c55e 70%, #22c55e 100%); }
     .capacity-track { height: 10px; border-radius: 9999px; background: #e2e8f0; overflow: hidden; }
 
-    .view-btn { background: transparent; color: #94a3b8; border: 1px solid #1b3a6b; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .view-btn { background: transparent; color: #94a3b8; border: 1px solid #1b3a6b; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.15s ease, color 0.15s ease; }
     .view-btn.active { background: #1b3a6b; color: #fff; }
+
+    /* Warehouse card shell — cohesive unit with subtle depth and hover lift */
+    .warehouse-card { border-radius: 16px; overflow: hidden; border: 1px solid rgba(15, 35, 70, 0.08); box-shadow: 0 1px 2px rgba(11,30,61,0.05), 0 12px 28px -18px rgba(11, 30, 61, 0.55); transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease; }
+    .warehouse-card:hover { transform: translateY(-3px); box-shadow: 0 2px 6px rgba(11,30,61,0.08), 0 18px 36px -18px rgba(11, 30, 61, 0.6); }
 
     /* Modal transition */
     #addWarehouseModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
@@ -65,9 +69,14 @@
                                 <p style="font-size:11px;color:#94a3b8;margin-top:4px;">{{ data_get($warehouse, 'address') }}</p>
                             @endif
                         </div>
-                        <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:rgba(34,197,94,0.12);color:#22c55e;font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">
-                            <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
-                            {{ data_get($warehouse, 'status') }}
+                        @php
+                            $whActive = strtolower((string) data_get($warehouse, 'status')) === 'active';
+                            $whAccent = $whActive ? '#22c55e' : '#94a3b8';
+                            $whBg = $whActive ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.15)';
+                        @endphp
+                        <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:{{ $whBg }};color:{{ $whAccent }};font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:{{ $whAccent }};display:inline-block;"></span>
+                            {{ ucfirst((string) data_get($warehouse, 'status')) }}
                         </span>
                     </div>
                 </div>

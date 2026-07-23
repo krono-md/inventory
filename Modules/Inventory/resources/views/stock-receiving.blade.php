@@ -1,6 +1,6 @@
 @extends('inventory::layouts.dashboard')
 
-@section('title', 'Stock Receiving')
+@section('title', 'Receiving')
 
 @push('styles')
 <style>
@@ -10,13 +10,7 @@
     .status-approved { background: #dcfce7; color: #166534; }
     .status-rejected { background: #fee2e2; color: #991b1b; }
 
-    .kpi-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
-    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
-    .table-row { transition: background 0.12s ease; }
-    .table-row:hover { background: #f8fafc; }
     .tab-btn { transition: all 0.15s ease; }
-    .fade-in { animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
     #confirmModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
     #confirmModal.open { opacity: 1; pointer-events: auto; }
@@ -26,46 +20,64 @@
 @endpush
 
 @section('content')
+<div class="inv-page">
     @if(session('success'))
         <div style="margin-bottom:16px;padding:12px 16px;background:rgba(34,197,94,0.12);color:#16a34a;border-radius:10px;font-weight:500;font-size:14px;">
             {{ session('success') }}
         </div>
     @endif
 
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
-        <div class="kpi-card" style="background:#0b1e3d;padding:20px;border-radius:20px;">
-            <p style="font-size:13px;color:#94a3b8;margin:0 0 4px 0;">Pending Deliveries</p>
-            <p style="font-size:36px;font-weight:700;color:#fff;margin:0;">{{ $pendingCount }}</p>
+    <!-- KPI tiles -->
+    <div class="kpi-row cols-3">
+        <div class="kpi-tile" style="--accent:#f59e0b;">
+            <div class="kpi-head">
+                <span class="kpi-label">Pending Deliveries</span>
+                <span class="kpi-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                </span>
+            </div>
+            <p class="kpi-value">{{ number_format($pendingCount) }}</p>
         </div>
-        <div class="kpi-card" style="background:#0b1e3d;padding:20px;border-radius:20px;">
-            <p style="font-size:13px;color:#94a3b8;margin:0 0 4px 0;">Received Today</p>
-            <p style="font-size:36px;font-weight:700;color:#fff;margin:0;">{{ $receivedTodayCount }}</p>
+        <div class="kpi-tile" style="--accent:#22c55e;">
+            <div class="kpi-head">
+                <span class="kpi-label">Received Today</span>
+                <span class="kpi-icon" style="background:rgba(34,197,94,0.15);color:#22c55e;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </span>
+            </div>
+            <p class="kpi-value">{{ number_format($receivedTodayCount) }}</p>
         </div>
-        <div class="kpi-card" style="background:#0b1e3d;padding:20px;border-radius:20px;">
-            <p style="font-size:13px;color:#94a3b8;margin:0 0 4px 0;">Rejected</p>
-            <p style="font-size:36px;font-weight:700;color:#fff;margin:0;">{{ $rejectedCount }}</p>
+        <div class="kpi-tile" style="--accent:#ef4444;">
+            <div class="kpi-head">
+                <span class="kpi-label">Rejected</span>
+                <span class="kpi-icon" style="background:rgba(239,68,68,0.15);color:#ef4444;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </span>
+            </div>
+            <p class="kpi-value">{{ number_format($rejectedCount) }}</p>
         </div>
     </div>
 
-    <div style="background:#fff;border-radius:20px;overflow:hidden;min-width:0;">
-        <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;min-width:0;border-bottom:1px solid #e2e8f0;">
+    <!-- Data panel -->
+    <div class="data-panel">
+        <div class="data-toolbar" style="border-bottom:1px solid #eef2f7;">
             <div style="display:flex;gap:4px;background:#e2e8f0;border-radius:8px;padding:3px;flex-shrink:0;">
                 <button id="tabPending" class="tab-btn" onclick="switchTab('pending')" style="padding:6px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;background:#0b1e3d;color:#fff;">Pending</button>
                 <button id="tabHistory" class="tab-btn" onclick="switchTab('history')" style="padding:6px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;background:transparent;color:#64748b;">History</button>
             </div>
-            <div id="pendingFilters" style="display:flex;align-items:center;gap:12px;flex:1;">
-                <form method="GET" action="{{ route('inventory.stock-receiving') }}" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
-                    <div style="display:flex;align-items:center;background:#f1f5f9;border-radius:8px;padding:8px 14px;gap:8px;flex:1;min-width:150px;border:1px solid #e2e8f0;">
+            <div id="pendingFilters" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                <form method="GET" action="{{ route('inventory.stock-receiving') }}" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                    <div class="tb-search">
                         <svg width="16" height="16" fill="none" stroke="#64748b" viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/></svg>
-                        <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search shipment or supplier..." style="border:none;outline:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:#333;width:100%;">
+                        <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search shipment or supplier...">
                     </div>
-                    <select name="status" onchange="this.form.submit()" style="background:#f1f5f9;color:#333;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;outline:none;flex-shrink:0;">
+                    <select name="status" class="tb-select" onchange="this.form.submit()">
                         <option value="">All Status</option>
                         <option value="pending" {{ ($filters['status'] ?? '') === 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="intransit" {{ ($filters['status'] ?? '') === 'intransit' ? 'selected' : '' }}>In Transit</option>
                     </select>
                     @if(array_filter($filters ?? []))
-                        <a href="{{ route('inventory.stock-receiving') }}" style="color:#64748b;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:12px;font-family:'Inter',sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;">
+                        <a href="{{ route('inventory.stock-receiving') }}" class="tb-clear">
                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                             Clear
                         </a>
@@ -74,32 +86,32 @@
             </div>
         </div>
 
-        <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;">
+        <div class="responsive-table" style="min-width:0;">
+            <table class="data-grid">
                 <thead>
-                    <tr style="background:#1b3a6b;">
-                        <th style="text-align:left;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">SHIPMENT</th>
-                        <th style="text-align:left;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">SUPPLIER</th>
-                        <th style="text-align:left;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">CATEGORY</th>
-                        <th style="text-align:center;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">QTY</th>
-                        <th style="text-align:left;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">WAREHOUSE</th>
-                        <th style="text-align:center;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">STATUS</th>
-                        <th style="text-align:center;padding:10px 16px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;">ACTION</th>
+                    <tr>
+                        <th>SHIPMENT</th>
+                        <th>SUPPLIER</th>
+                        <th>CATEGORY</th>
+                        <th class="col-r">QTY</th>
+                        <th>WAREHOUSE</th>
+                        <th>STATUS</th>
+                        <th>ACTION</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyPending">
                     @forelse ($deliveries as $delivery)
                         @php $isProcessed = $deliveryProcessed[$delivery->id] ?? false; @endphp
-                        <tr class="table-row" style="border-bottom:1px solid #e2e8f0;{{ $isProcessed ? 'opacity:0.4;' : '' }}">
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;font-weight:500;">{{ $delivery->shipment_number }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;">{{ $delivery->supplier_name }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#5B7A9D;">{{ $delivery->po_category ?? '—' }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;font-weight:600;text-align:center;">{{ $delivery->qty }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;">{{ $delivery->destination_warehouse_name }}</td>
-                            <td style="padding:12px 16px;text-align:center;">
+                        <tr style="{{ $isProcessed ? 'opacity:0.4;' : '' }}">
+                            <td class="cell-strong">{{ $delivery->shipment_number }}</td>
+                            <td>{{ $delivery->supplier_name }}</td>
+                            <td class="cell-muted">{{ $delivery->po_category ?? '—' }}</td>
+                            <td class="col-r cell-strong">{{ $delivery->qty }}</td>
+                            <td>{{ $delivery->destination_warehouse_name }}</td>
+                            <td>
                                 <span class="status-badge status-{{ str_replace(' ', '-', strtolower($delivery->status)) }}">{{ ucfirst($delivery->status) }}</span>
                             </td>
-                            <td style="padding:12px 16px;text-align:center;">
+                            <td>
                                 @error("del_action_{$delivery->id}")
                                     <p style="color:#ef4444;font-size:11px;margin:0 0 6px 0;">{{ $message }}</p>
                                 @enderror
@@ -124,16 +136,16 @@
                 </tbody>
                 <tbody id="tbodyHistory" style="display:none;">
                     @forelse ($history as $entry)
-                        <tr class="table-row" style="border-bottom:1px solid #e2e8f0;">
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;font-weight:500;">{{ $entry->shipment_number }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#5B7A9D;">{{ $historySuppliers[$entry->shipment_number] ?? '—' }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#5B7A9D;">{{ $entry->item?->category?->name ?? '—' }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;font-weight:600;text-align:center;">{{ $entry->quantity }}</td>
-                            <td style="padding:12px 16px;font-size:13px;color:#132B52;">{{ $entry->warehouse?->name ?? '—' }}</td>
-                            <td style="padding:12px 16px;text-align:center;">
+                        <tr>
+                            <td class="cell-strong">{{ $entry->shipment_number }}</td>
+                            <td class="cell-muted">{{ $historySuppliers[$entry->shipment_number] ?? '—' }}</td>
+                            <td class="cell-muted">{{ $entry->item?->category?->name ?? '—' }}</td>
+                            <td class="col-r cell-strong">{{ $entry->quantity }}</td>
+                            <td>{{ $entry->warehouse?->name ?? '—' }}</td>
+                            <td>
                                 <span class="status-badge status-{{ $entry->status }}" style="{{ $entry->status === 'approved' ? 'background:#dcfce7;color:#166534;' : 'background:#fee2e2;color:#991b1b;' }}">{{ ucfirst($entry->status) }}</span>
                             </td>
-                            <td style="padding:12px 16px;font-size:12px;color:#5B7A9D;text-align:center;">
+                            <td class="cell-muted" style="font-size:12px;">
                                 <div>by {{ $entry->processor?->name ?? '—' }}</div>
                                 <div style="font-size:11px;color:#94a3b8;">{{ $entry->processed_at?->format('M d, Y h:i A') ?? '—' }}</div>
                             </td>
@@ -149,12 +161,13 @@
 
         <div id="pendingPagination">
             @if($deliveries->hasPages())
-                <div style="padding:16px;border-top:1px solid #e2e8f0;">
+                <div class="panel-foot">
                     {{ $deliveries->links() }}
                 </div>
             @endif
         </div>
     </div>
+</div>
 
     <script>
         function switchTab(tab) {
