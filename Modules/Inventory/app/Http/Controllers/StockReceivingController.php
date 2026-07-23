@@ -22,15 +22,10 @@ class StockReceivingController extends Controller
     {
         $schema = Schema::connection('procurement');
         $hasDeliverToWarehouse = $schema->hasColumn('deliveries', 'deliver_to_warehouse');
-        $hasCategory = $schema->hasColumn('supplier_products', 'categories');
 
         $destinationWarehouse = $hasDeliverToWarehouse
             ? DB::raw('deliveries.deliver_to_warehouse as destination_warehouse_id')
             : DB::raw('NULL as destination_warehouse_id');
-
-        $poCategory = $hasCategory
-            ? DB::raw('(SELECT sp.categories FROM purchase_order_items poi LEFT JOIN supplier_products sp ON sp.id = poi.supplier_product_id WHERE poi.purchase_order_id = deliveries.purchase_order_id LIMIT 1) as po_category')
-            : DB::raw('NULL as po_category');
 
         $query = Procurement::query()
             ->leftJoin('suppliers', 'deliveries.supplier_id', '=', 'suppliers.id')
@@ -39,7 +34,7 @@ class StockReceivingController extends Controller
                 'deliveries.*',
                 'suppliers.name as supplier_name',
                 $destinationWarehouse,
-                $poCategory
+                DB::raw('NULL as po_category')
             );
 
         if (! (config('nexora.root_admin_module_testing') && auth()->user()?->role === 'root_admin')) {
@@ -89,8 +84,8 @@ class StockReceivingController extends Controller
 
         $deliveryProcessed = [];
         $warehouseNames = Warehouse::withTrashed()
-            ->whereIn('id', $deliveries->pluck('destination_warehouse_id')->filter()->unique())
-            ->pluck('name', 'id');
+            ->whereIn('name', $deliveries->pluck('destination_warehouse_id')->filter()->unique())
+            ->pluck('name', 'name');
 
         $deliveries->getCollection()->transform(function ($delivery) use ($processedShipments, $warehouseNames) {
             $delivery->destination_warehouse_name = $warehouseNames[$delivery->destination_warehouse_id] ?? 'No warehouse assigned';
@@ -99,9 +94,23 @@ class StockReceivingController extends Controller
             return $delivery;
         });
 
+        $poIds = $deliveries->pluck('purchase_order_id')->filter()->unique()->values()->all();
+        $deliveryItems = Procurement::itemsForPurchaseOrders($poIds);
+
         foreach ($deliveries as $delivery) {
             $deliveryProcessed[$delivery->id] = in_array($delivery->shipment_number, $processedShipments, true);
+
+            $items = $deliveryItems[$delivery->purchase_order_id] ?? [];
+            $delivery->po_category = !empty($items) ? ($items[0]->categories ?? null) : null;
         }
+
+        $deliveryItemsJson = json_encode(collect($deliveryItems)->map(function ($items) {
+            return collect($items)->map(fn ($i) => [
+                'name' => $i->item_name,
+                'qty' => $i->qty,
+                'sku' => $i->sku,
+            ]);
+        })->toArray());
 
         // Audit trail â€” past approved/rejected records
         $history = StockReceiving::with(['item', 'warehouse', 'processor'])
@@ -123,6 +132,7 @@ class StockReceivingController extends Controller
             'historySuppliers' => $historySuppliers,
             'filters' => $request->only(['search', 'status']),
             'activePage' => 'stock-receiving',
+            'deliveryItemsJson' => $deliveryItemsJson,
         ]);
     }
 
@@ -130,7 +140,7 @@ class StockReceivingController extends Controller
     {
         $delivery = $this->findDeliveryForCurrentClient((int) $deliveryId);
         $warehouse = Warehouse::query()
-            ->whereKey($delivery->destination_warehouse_id)
+            ->where('name', $delivery->destination_warehouse_id)
             ->where('status', 'active')
             ->first();
 
@@ -149,98 +159,142 @@ class StockReceivingController extends Controller
 
     private function executeApproval(Procurement $delivery, array $validated): true|string
     {
-        return DB::connection('inventory')->transaction(function () use ($delivery, $validated) {
-            // Fetch procurement product data (sku, name, unit_price)
-            $product = $delivery->getSupplierProduct();
+        $clientId = (int) session('employee_client_id');
+        $employeeId = session('employee_id');
+        $inv = DB::connection('inventory');
 
-            if (!$product) {
-                return 'Could not fetch delivery from procurement.';
+        $poItems = $delivery->getPurchaseOrderItems();
+
+        if (empty($poItems)) {
+            return 'Could not fetch delivery from procurement.';
+        }
+
+        foreach ($poItems as $product) {
+            $categoryName = $product->categories ?? 'Uncategorized Incoming Goods';
+            $categoryId = $inv->table('categories')
+                ->where('name', $categoryName)
+                ->where('client_id', $clientId)
+                ->value('id');
+
+            if (!$categoryId) {
+                try {
+                    $categoryId = $inv->table('categories')->insertGetId([
+                        'name' => $categoryName,
+                        'client_id' => $clientId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                    // A concurrent receipt created this client's category first;
+                    // re-fetch its id instead of failing the whole approval.
+                    $categoryId = $inv->table('categories')
+                        ->where('name', $categoryName)
+                        ->where('client_id', $clientId)
+                        ->value('id');
+                }
             }
 
-            // Try to match existing item by SKU, or create new one
-            $item = Item::where('sku', $product->sku)->first();
+            $itemId = $inv->table('items')
+                ->where('sku', $product->sku)
+                ->where('client_id', $clientId)
+                ->value('id');
 
-            if (!$item) {
-                $categoryName = $product->categories ?? 'Uncategorized Incoming Goods';
-                $category = Category::query()->firstOrCreate([
-                    'name' => $categoryName,
-                ]);
-
-                $item = Item::create([
+            if (!$itemId) {
+                $itemId = $inv->table('items')->insertGetId([
                     'sku' => $product->sku,
                     'name' => $product->item_name,
-                    'category_id' => $category->id,
+                    'category_id' => $categoryId,
                     'unit_cost' => $product->unit_price,
+                    'client_id' => $clientId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+            } elseif ($categoryId) {
+                $inv->table('items')
+                    ->where('id', $itemId)
+                    ->update(['category_id' => $categoryId, 'updated_at' => now()]);
             }
 
-            // Lock the stock level row FIRST â€” this is the serialization point.
-            // Any concurrent request for the same item+warehouse will wait here.
-            $stockLevel = StockLevel::where('item_id', $item->id)
+            $stockLevel = $inv->table('stock_levels')
+                ->where('item_id', $itemId)
                 ->where('warehouse_id', $validated['warehouse_id'])
                 ->lockForUpdate()
                 ->first();
 
-            if (!$stockLevel) {
+            if ($stockLevel) {
+                $alreadyProcessed = $inv->table('stock_receivings')
+                    ->where('shipment_number', $delivery->shipment_number)
+                    ->where('item_id', $itemId)
+                    ->exists();
+
+                if ($alreadyProcessed) {
+                    continue;
+                }
+
+                $inv->table('stock_levels')
+                    ->where('id', $stockLevel->id)
+                    ->increment('stock', $product->qty);
+            } else {
                 try {
-                    $stockLevel = StockLevel::create([
-                        'item_id' => $item->id,
+                    $inv->table('stock_levels')->insert([
+                        'item_id' => $itemId,
                         'warehouse_id' => $validated['warehouse_id'],
-                        'stock' => $delivery->qty,
+                        'stock' => $product->qty,
                         'reorder_threshold' => 10,
+                        'client_id' => $clientId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 } catch (\Illuminate\Database\UniqueConstraintViolationException) {
-                    $stockLevel = StockLevel::where('item_id', $item->id)
+                    $existing = $inv->table('stock_levels')
+                        ->where('item_id', $itemId)
                         ->where('warehouse_id', $validated['warehouse_id'])
                         ->lockForUpdate()
                         ->first();
-                    $stockLevel->increment('stock', $delivery->qty);
-                }
-            } else {
-                // NOW check if already processed â€” safe because we hold the exclusive lock.
-                if (StockReceiving::where('shipment_number', $delivery->shipment_number)->where('item_id', $item->id)->exists()) {
-                    return 'This delivery has already been processed.';
-                }
 
-                $stockLevel->increment('stock', $delivery->qty);
+                    $inv->table('stock_levels')
+                        ->where('id', $existing->id)
+                        ->increment('stock', $product->qty);
+                }
             }
 
-            // Update warehouse activity
-            Warehouse::where('id', $validated['warehouse_id'])
-                ->update(['last_activity_at' => now()]);
-
-            // Create stock movement record
-            StockMovement::create([
+            $inv->table('stock_movements')->insert([
                 'type' => 'inbound',
-                'item_id' => $item->id,
+                'item_id' => $itemId,
                 'warehouse_id' => $validated['warehouse_id'],
-                'quantity' => $delivery->qty,
+                'quantity' => $product->qty,
                 'reference' => $delivery->shipment_number,
                 'notes' => "From delivery - Shipment: {$delivery->shipment_number}",
-                'performed_by' => session('employee_id'),
+                'performed_by' => $employeeId,
+                'client_id' => $clientId,
                 'created_at' => now(),
             ]);
 
-            // Record the receiving
-            StockReceiving::create([
+            $inv->table('stock_receivings')->insert([
                 'shipment_number' => $delivery->shipment_number,
-                'item_id' => $item->id,
+                'item_id' => $itemId,
                 'warehouse_id' => $validated['warehouse_id'],
-                'quantity' => $delivery->qty,
+                'quantity' => $product->qty,
                 'status' => 'approved',
-                'processed_by' => session('employee_id'),
+                'processed_by' => $employeeId,
                 'remarks' => $delivery->remarks,
+                'client_id' => $clientId,
                 'processed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
+        }
 
-            // Update the procurement delivery status to delivered
-            DB::connection('procurement')
-                ->table('deliveries')
-                ->where('id', $delivery->id)
-                ->update(['status' => 'delivered']);
+        $inv->table('warehouses')
+            ->where('id', $validated['warehouse_id'])
+            ->update(['last_activity_at' => now()]);
 
-            return true;
-        });
+        DB::connection('procurement')
+            ->table('deliveries')
+            ->where('id', $delivery->id)
+            ->update(['status' => 'delivered']);
+
+        return true;
     }
 
     public function reject(Request $request, $deliveryId)
@@ -251,29 +305,33 @@ class StockReceivingController extends Controller
 
         $delivery = $this->findDeliveryForCurrentClient((int) $deliveryId);
 
-        $result = DB::connection('inventory')->transaction(function () use ($delivery, $validated) {
-            if (StockReceiving::where('shipment_number', $delivery->shipment_number)->where('status', 'rejected')->exists()) {
-                return 'This delivery has already been processed.';
-            }
+        $clientId = (int) session('employee_client_id');
 
-            StockReceiving::create([
-                'shipment_number' => $delivery->shipment_number,
-                'item_id' => null,
-                'warehouse_id' => null,
-                'quantity' => $delivery->qty,
-                'status' => 'rejected',
-                'processed_by' => session('employee_id'),
-                'remarks' => $validated['reject_reason'],
-                'processed_at' => now(),
-            ]);
+        $inv = DB::connection('inventory');
 
-            return true;
-        });
+        $exists = $inv->table('stock_receivings')
+            ->where('shipment_number', $delivery->shipment_number)
+            ->where('status', 'rejected')
+            ->exists();
 
-        if ($result === true) {
-            return back()->with('success', 'Delivery rejected.');
+        if ($exists) {
+            return back()->with('error', 'This delivery has already been processed.');
         }
 
-        return back()->withErrors(["del_action_{$delivery->id}" => $result]);
+        $inv->table('stock_receivings')->insert([
+            'shipment_number' => $delivery->shipment_number,
+            'item_id' => null,
+            'warehouse_id' => null,
+            'quantity' => $delivery->qty,
+            'status' => 'rejected',
+            'processed_by' => session('employee_id'),
+            'remarks' => $validated['reject_reason'],
+            'client_id' => $clientId,
+            'processed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'Delivery rejected.');
     }
 }

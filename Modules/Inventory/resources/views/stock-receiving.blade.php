@@ -12,10 +12,30 @@
 
     .tab-btn { transition: all 0.15s ease; }
 
-    #confirmModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    #confirmModal.open { opacity: 1; pointer-events: auto; }
-    #rejectModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    #rejectModal.open { opacity: 1; pointer-events: auto; }
+    .shipment-row { cursor: pointer; transition: background 0.15s; }
+    .shipment-row:hover { background: #f1f5f9; }
+
+    .expand-arrow { transition: transform 0.2s ease; display: inline-flex; align-items: center; color: #94a3b8; }
+    .expand-arrow.open { transform: rotate(90deg); color: #0b1e3d; }
+
+    .items-detail { display: none; }
+    .items-detail.open { display: table-row; }
+    .items-detail td { padding: 0 !important; background: #f8fafc; }
+    .items-detail-inner { border-top: 1px solid #e2e8f0; padding: 14px 16px 14px 52px; }
+    .items-mini-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .items-mini-table th { text-align:left; padding:6px 10px; color:#64748b; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #e2e8f0; }
+    .items-mini-table td { padding:6px 10px; color:#334155; border-bottom:1px solid #eef2f7; }
+    .items-mini-table tr:last-child td { border-bottom:none; }
+
+    #confirmModal, #rejectModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    #confirmModal.open, #rejectModal.open { opacity: 1; pointer-events: auto; }
+
+    .modal-items-list { margin: 0; padding: 0; list-style: none; font-size: 13px; }
+    .modal-items-list li { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+    .modal-items-list li:last-child { border-bottom: none; }
+    .modal-item-name { color: #1e293b; font-weight: 500; }
+    .modal-item-meta { color: #64748b; font-size: 12px; }
+    .modal-item-qty { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; color: #0b1e3d; }
 </style>
 @endpush
 
@@ -90,9 +110,10 @@
             <table class="data-grid">
                 <thead>
                     <tr>
+                        <th style="width:32px;"></th>
                         <th>SHIPMENT</th>
                         <th>SUPPLIER</th>
-                        <th>CATEGORY</th>
+                        <th>ITEMS</th>
                         <th class="col-r">QTY</th>
                         <th>WAREHOUSE</th>
                         <th>STATUS</th>
@@ -102,7 +123,12 @@
                 <tbody id="tbodyPending">
                     @forelse ($deliveries as $delivery)
                         @php $isProcessed = $deliveryProcessed[$delivery->id] ?? false; @endphp
-                        <tr style="{{ $isProcessed ? 'opacity:0.4;' : '' }}">
+                        <tr class="shipment-row" data-po-id="{{ $delivery->purchase_order_id }}" onclick="toggleItems(this)" style="{{ $isProcessed ? 'opacity:0.4;' : '' }}">
+                            <td>
+                                <span class="expand-arrow" data-arrow="1">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                                </span>
+                            </td>
                             <td class="cell-strong">{{ $delivery->shipment_number }}</td>
                             <td>{{ $delivery->supplier_name }}</td>
                             <td class="cell-muted">{{ $delivery->po_category ?? '—' }}</td>
@@ -111,7 +137,7 @@
                             <td>
                                 <span class="status-badge status-{{ str_replace(' ', '-', strtolower($delivery->status)) }}">{{ ucfirst($delivery->status) }}</span>
                             </td>
-                            <td>
+                            <td onclick="event.stopPropagation()">
                                 @error("del_action_{$delivery->id}")
                                     <p style="color:#ef4444;font-size:11px;margin:0 0 6px 0;">{{ $message }}</p>
                                 @enderror
@@ -123,9 +149,21 @@
                                 @endif
                             </td>
                         </tr>
+                        <tr class="items-detail" data-po-id="{{ $delivery->purchase_order_id }}">
+                            <td colspan="8">
+                                <div class="items-detail-inner">
+                                    <div style="max-width:600px;">
+                                        <table class="items-mini-table">
+                                            <thead><tr><th style="width:40%;">Item</th><th style="width:35%;">SKU</th><th style="width:25%;text-align:right;">Qty</th></tr></thead>
+                                            <tbody class="items-tbody" data-po-id="{{ $delivery->purchase_order_id }}"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">
+                            <td colspan="8" style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">
                                 <svg width="48" height="48" fill="none" stroke="#cbd5e1" viewBox="0 0 24 24" stroke-width="1.5" style="margin:0 auto 12px;display:block;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                 </svg>
@@ -137,6 +175,7 @@
                 <tbody id="tbodyHistory" style="display:none;">
                     @forelse ($history as $entry)
                         <tr>
+                            <td></td>
                             <td class="cell-strong">{{ $entry->shipment_number }}</td>
                             <td class="cell-muted">{{ $historySuppliers[$entry->shipment_number] ?? '—' }}</td>
                             <td class="cell-muted">{{ $entry->item?->category?->name ?? '—' }}</td>
@@ -152,7 +191,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">No processed records yet.</td>
+                            <td colspan="8" style="text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;">No processed records yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -170,6 +209,31 @@
 </div>
 
     <script>
+        const deliveryItems = {!! $deliveryItemsJson !!};
+
+        function toggleItems(el) {
+            const row = el.closest('tr.shipment-row');
+            const poId = row.dataset.poId;
+            const detailRow = row.nextElementSibling;
+            const isOpen = detailRow.classList.contains('open');
+            const arrow = row.querySelector('.expand-arrow');
+
+            arrow.classList.toggle('open');
+
+            if (isOpen) {
+                detailRow.classList.remove('open');
+            } else {
+                const tbody = detailRow.querySelector('.items-tbody');
+                if (!tbody.hasChildNodes()) {
+                    const items = deliveryItems[poId] || [];
+                    tbody.innerHTML = items.length
+                        ? items.map(i => `<tr><td style="font-weight:500;">${i.name}</td><td style="color:#64748b;font-family:monospace;font-size:12px;">${i.sku}</td><td style="text-align:right;font-weight:600;">${i.qty}</td></tr>`).join('')
+                        : '<tr><td colspan="3" style="color:#94a3b8;text-align:center;padding:12px;">No items found for this purchase order.</td></tr>';
+                }
+                detailRow.classList.add('open');
+            }
+        }
+
         function switchTab(tab) {
             const tabPending = document.getElementById('tabPending');
             const tabHistory = document.getElementById('tabHistory');
@@ -194,20 +258,23 @@
 
     <!-- Confirm Modal -->
     <div id="confirmModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:center;justify-content:center;">
-        <div class="nexora-modal" style="max-width:480px;">
+        <div class="nexora-modal" style="max-width:520px;">
             <div class="nexora-modal-logo"></div>
             <div class="nexora-modal-header">
-                <h2 class="nexora-modal-title">Confirm Receiving</h2>
+                <h2 class="nexora-modal-title">Approve Receiving</h2>
                 <button type="button" onclick="closeConfirmModal()" class="nexora-modal-close">&times;</button>
-            </div>
-            <div style="padding:20px;font-size:14px;color:#333;line-height:1.8;">
-                <p style="margin:0 0 8px 0;"><strong>Shipment:</strong> <span id="confirmShipment"></span></p>
-                <p style="margin:0 0 8px 0;"><strong>Supplier:</strong> <span id="confirmSupplier"></span></p>
-                <p style="margin:0 0 8px 0;"><strong>Warehouse:</strong> <span id="confirmWarehouse"></span></p>
-                <p style="margin:0 0 8px 0;"><strong>Quantity:</strong> <span id="confirmQty"></span></p>
             </div>
             <form id="confirmForm" method="POST" action="">
                 @csrf
+                <div style="padding:6px 20px 16px 20px;font-size:13px;color:#475569;line-height:1.7;">
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eef2f7;">
+                        <div><strong style="color:#1e293b;">Shipment:</strong><br><span id="confirmShipment" style="font-size:14px;"></span></div>
+                        <div><strong style="color:#1e293b;">Supplier:</strong><br><span id="confirmSupplier"></span></div>
+                        <div><strong style="color:#1e293b;">Warehouse:</strong><br><span id="confirmWarehouse"></span></div>
+                    </div>
+                    <div style="margin-bottom:6px;"><strong style="color:#1e293b;font-size:13px;">Items to receive:</strong></div>
+                    <ul class="modal-items-list" id="confirmItemsList"></ul>
+                </div>
                 <div class="nexora-modal-actions">
                     <button type="button" onclick="closeConfirmModal()" class="nexora-modal-btn-secondary">Cancel</button>
                     <button type="submit" class="nexora-modal-btn-primary" style="background:#166534;color:#fff;border-color:#166534;">Confirm & Receive</button>
@@ -242,30 +309,43 @@
     </div>
 
     <script>
+        const confirmModal = document.getElementById('confirmModal');
+        const rejectModal = document.getElementById('rejectModal');
+
         function openConfirmModal(id, shipment, supplier, warehouse, qty) {
             document.getElementById('confirmShipment').textContent = shipment;
             document.getElementById('confirmSupplier').textContent = supplier;
             document.getElementById('confirmWarehouse').textContent = warehouse;
-            document.getElementById('confirmQty').textContent = qty;
+
+            const itemsList = document.getElementById('confirmItemsList');
+            const row = document.querySelector(`tr.shipment-row[data-po-id]`);
+            if (row) {
+                const poId = row.dataset.poId;
+                const items = deliveryItems[poId] || [];
+                itemsList.innerHTML = items.length
+                    ? items.map(i => `<li><span class="modal-item-name">${i.name}</span> <span class="modal-item-meta">${i.sku}</span> <span class="modal-item-qty">${i.qty}</span></li>`).join('')
+                    : '<li style="color:#94a3b8;justify-content:center;padding:12px 0;">No items</li>';
+            }
+
             document.getElementById('confirmForm').action = '{{ url("inventory/stock-receiving") }}' + '/' + id + '/approve';
-            document.getElementById('confirmModal').classList.add('open');
+            confirmModal.classList.add('open');
         }
         function closeConfirmModal() {
-            document.getElementById('confirmModal').classList.remove('open');
+            confirmModal.classList.remove('open');
         }
-        document.getElementById('confirmModal').addEventListener('click', function(e) {
+        confirmModal.addEventListener('click', function(e) {
             if (e.target === this) closeConfirmModal();
         });
 
         function openRejectModal(deliveryId) {
             document.getElementById('rejectForm').action = '{{ url("inventory/stock-receiving") }}' + '/' + deliveryId + '/reject';
-            document.getElementById('rejectModal').classList.add('open');
+            rejectModal.classList.add('open');
         }
         function closeRejectModal() {
-            document.getElementById('rejectModal').classList.remove('open');
+            rejectModal.classList.remove('open');
             document.getElementById('rejectForm').reset();
         }
-        document.getElementById('rejectModal').addEventListener('click', function(e) {
+        rejectModal.addEventListener('click', function(e) {
             if (e.target === this) closeRejectModal();
         });
     </script>

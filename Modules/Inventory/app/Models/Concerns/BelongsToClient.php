@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Schema;
 
 trait BelongsToClient
 {
+    private static array $clientColumnCache = [];
+
     public function getConnectionName(): ?string
     {
         return 'inventory';
@@ -15,16 +17,20 @@ trait BelongsToClient
     protected static function bootBelongsToClient(): void
     {
         static::addGlobalScope('client', function (Builder $query): void {
-            if (! Schema::connection('inventory')->hasColumn($query->getModel()->getTable(), 'client_id')) {
-                // Never show legacy standalone Inventory data to a client
-                // before the owner upgrades the table with its client key.
+            $table = $query->getModel()->getTable();
+
+            if (! isset(self::$clientColumnCache[$table])) {
+                self::$clientColumnCache[$table] = Schema::connection('inventory')->hasColumn($table, 'client_id');
+            }
+
+            if (! self::$clientColumnCache[$table]) {
                 $query->whereRaw('1 = 0');
 
                 return;
             }
 
             if ($clientId = session('employee_client_id')) {
-                $query->where($query->getModel()->getTable().'.client_id', $clientId);
+                $query->where($table.'.client_id', $clientId);
             }
         });
 
