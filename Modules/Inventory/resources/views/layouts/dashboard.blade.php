@@ -215,6 +215,21 @@
                 transform: translateY(0);
             }
 
+            /* Pagination */
+            [role="navigation"][aria-label*="Pagination"] { margin-top:0; }
+            [role="navigation"][aria-label*="Pagination"] > div:last-child { display:flex !important; justify-content:space-between !important; align-items:center !important; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse { gap:4px !important; display:flex !important; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > a, [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > span[aria-current="page"], [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > span[aria-disabled="true"] { display:inline-flex; align-items:center; justify-content:center; padding:5px 11px !important; border-radius:8px !important; font-size:12px; font-weight:600; font-family:'Inter',sans-serif; color:#64748b !important; background:#fff !important; border:1px solid #e2e8f0 !important; min-width:32px; min-height:32px; line-height:1; box-sizing:border-box; text-decoration:none; transition:all 0.15s ease; margin:0 !important; box-shadow:none !important; cursor:pointer; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > span[aria-current="page"] { background:#0b1e3d !important; color:#fff !important; border-color:#0b1e3d !important; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > span[aria-current="page"] > span { background:transparent !important; color:inherit !important; border:0 !important; padding:0 !important; margin:0 !important; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > a:hover { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#0f172a !important; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > span[aria-disabled="true"] { opacity:0.35; cursor:default; background:#fff !important; border-color:#e2e8f0 !important; color:#cbd5e1 !important; }
+            [role="navigation"][aria-label*="Pagination"] .inline-flex.rtl\:flex-row-reverse > span[aria-disabled="true"] svg { color:#cbd5e1 !important; }
+            [role="navigation"][aria-label*="Pagination"] svg.w-5.h-5 { width:14px !important; height:14px !important; color:currentColor; }
+            [role="navigation"][aria-label*="Pagination"] .text-sm.text-gray-700 { color:#64748b !important; font-size:12px; }
+            [role="navigation"][aria-label*="Pagination"] .text-sm.text-gray-700 .font-medium { color:#0f172a; }
+            [role="navigation"][aria-label*="Pagination"] .sm\:hidden { display:none !important; }
+
         </style>
         @stack('styles')
     </head>
