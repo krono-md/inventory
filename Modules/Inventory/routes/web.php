@@ -6,6 +6,7 @@ use Modules\Inventory\Http\Controllers\ItemCatalogController;
 use Modules\Inventory\Http\Controllers\StockAdjustmentController;
 use Modules\Inventory\Http\Controllers\StockLevelController;
 use Modules\Inventory\Http\Controllers\StockMovementController;
+use Modules\Inventory\Http\Controllers\RequestController;
 use Modules\Inventory\Http\Controllers\StockReceivingController;
 use Modules\Inventory\Http\Controllers\StockTransferController;
 use Modules\Inventory\Http\Controllers\WarehouseController;
@@ -30,6 +31,9 @@ Route::middleware('inventory.access')->name('inventory.')->group(function (): vo
     Route::delete('/item-catalog/{item}', [ItemCatalogController::class, 'destroy'])->name('item-catalog.destroy');
     Route::post('/item-catalog/packing-material', [ItemCatalogController::class, 'storePackingMaterial'])->name('item-catalog.packing.store');
     Route::delete('/item-catalog/packing-material/{id}', [ItemCatalogController::class, 'destroyPackingMaterial'])->name('item-catalog.packing.destroy');
+
+    Route::get('/requests', [RequestController::class, 'index'])->name('requests');
+    Route::post('/requests', [RequestController::class, 'store'])->name('requests.store');
 
     Route::get('/stock-movement', [StockMovementController::class, 'index'])->name('stock-movement');
     Route::patch('/stock-levels/{stockLevel}', [StockLevelController::class, 'update'])->name('stock-levels.update');

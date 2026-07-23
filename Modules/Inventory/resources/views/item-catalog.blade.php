@@ -151,10 +151,7 @@
                                 <span style="background:{{ $colors['bg'] }};color:{{ $colors['text'] }};font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">{{ $item['status'] }}</span>
                             </td>
                             <td style="text-align:center;padding:12px 4px;">
-                                <form method="POST" action="{{ route('inventory.item-catalog.destroy', $item['id']) }}" onsubmit="return confirm('Delete this item permanently?')" style="display:inline;">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:13px;padding:4px 8px;">🗑</button>
-                                </form>
+                                <button onclick="openDeleteModal({{ $item['id'] }}, '{{ $item['sku'] }}', '{{ addslashes($item['name']) }}')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:13px;padding:4px 8px;" title="Delete item">🗑</button>
                             </td>
                         </tr>
                         <tr class="expand-row" id="expand-{{ $loop->index }}">
@@ -250,6 +247,42 @@
         </div>
     </div>
 </div>
+<div id="deleteModal" class="nexora-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:center;justify-content:center;">
+    <div class="nexora-modal" style="max-width:460px;">
+        <div class="nexora-modal-logo"></div>
+        <div class="nexora-modal-header">
+            <h2 class="nexora-modal-title" style="color:#dc2626;">Delete Item</h2>
+            <button type="button" onclick="closeDeleteModal()" class="nexora-modal-close">&times;</button>
+        </div>
+        <div style="padding:4px 0 12px;font-size:13px;color:#cdd9ee;line-height:1.7;">
+            <p style="margin:0 0 8px;">This action <strong>cannot be undone</strong>.</p>
+            <p style="margin:0;"><strong id="deleteItemName" style="color:#f87171;"></strong> will be permanently removed along with all stock levels, movement history, adjustments, transfers, and reservations.</p>
+        </div>
+        <form id="deleteForm" method="POST" action="">
+            @csrf @method('DELETE')
+            <div class="nexora-modal-actions">
+                <button type="button" onclick="closeDeleteModal()" class="nexora-modal-btn-secondary">Cancel</button>
+                <button type="submit" class="nexora-modal-btn-primary" style="background:#dc2626;color:#fff;border-color:#dc2626;">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openDeleteModal(id, sku, name) {
+        document.getElementById('deleteItemName').textContent = sku + ' - ' + name;
+        document.getElementById('deleteForm').action = '{{ url("inventory/item-catalog") }}' + '/' + id;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDeleteModal();
+    });
+</script>
 @endsection
 
 @push('scripts')

@@ -156,7 +156,7 @@ class ItemCatalogController extends Controller
         return redirect()->route('inventory.item-catalog')->with('success', "Item '{$item->sku}' created successfully.");
     }
 
-    public function destroy(Item $item)
+    public function destroy(Request $request, Item $item)
     {
         $reserved = OrderReservation::where('item_id', $item->id)
             ->where('status', 'reserved')
