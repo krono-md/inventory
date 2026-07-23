@@ -15,10 +15,9 @@ class RequestController extends Controller
                 ->table('requisitions')
                 ->where('requested_by', session('employee_name'))
                 ->orderByDesc('created_at')
-                ->limit(50)
-                ->get();
+                ->paginate(10);
         } catch (\Exception $e) {
-            $requests = collect();
+            $requests = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
         }
 
         $defectItems = \Modules\Inventory\Models\Defect::where('status', 'Open')->get();

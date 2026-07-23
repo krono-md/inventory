@@ -19,15 +19,39 @@
     .stock-out { color: #991b1b; background: #fee2e2; }
     .stock-low { color: #854d0e; background: #fef9c3; }
 
-    .type-toggle { display: flex; gap: 0; background: #e2e8f0; border-radius: 8px; padding: 3px; }
-    .type-toggle button { padding: 6px 16px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; background: transparent; color: #64748b; transition: all 0.15s; flex: 1; }
-    .type-toggle button.active { background: #0b1e3d; color: #fff; }
+    .type-toggle { display: flex; gap: 0; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 4px; border: 1px solid rgba(255,255,255,0.06); }
 
-    #requestModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .item-list { max-height: 220px; overflow-y: auto; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); padding: 4px; }
+    .item-list .il-group-header { padding: 8px 12px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.35); }
+    .item-list .il-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 8px; cursor: pointer; transition: all 0.12s ease; }
+    .item-list .il-item:hover { background: rgba(255,255,255,0.06); }
+    .item-list .il-item.selected { background: rgba(27,111,200,0.2); }
+    .item-list .il-item .il-name { font-size: 13px; font-weight: 600; color: #fff; }
+    .item-list .il-item .il-sku { font-size: 11px; color: rgba(255,255,255,0.4); margin-left: 8px; }
+    .item-list .il-item .il-stock { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; flex-shrink: 0; }
+    .item-list .il-item .il-stock.il-out { color: #fca5a5; background: rgba(239,68,68,0.15); }
+    .item-list .il-item .il-stock.il-low { color: #fcd34d; background: rgba(245,158,11,0.15); }
+    .item-list .il-empty { padding: 20px 12px; text-align: center; color: rgba(255,255,255,0.3); font-size: 13px; }
+    .item-list::-webkit-scrollbar { width: 4px; }
+    .item-list::-webkit-scrollbar-track { background: transparent; }
+    .item-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    .type-toggle button { padding: 8px 20px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; background: transparent; color: rgba(255,255,255,0.45); transition: all 0.2s ease; flex: 1; letter-spacing: 0.2px; }
+    .type-toggle button:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.04); }
+    .type-toggle button.active { background: rgba(27,111,200,0.3); color: #90c8ff; box-shadow: 0 0 20px -6px rgba(27,111,200,0.25); }
+    .type-toggle button.active::after { content: ''; display: block; height: 2px; width: 20px; background: #4a9ee8; margin: 4px auto 0; border-radius: 2px; }
+
+    #requestModal { opacity: 0; pointer-events: none; }
     #requestModal.open { opacity: 1; pointer-events: auto; }
 
     .restock-fields, .replacement-fields { display: none; }
     .restock-fields.active, .replacement-fields.active { display: block; }
+
+    .req-type-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; margin-right: 8px; flex-shrink: 0; }
+    .req-type-icon.restock { background: rgba(27,111,200,0.2); }
+    .req-type-icon.replacement { background: rgba(245,158,11,0.2); }
+
+    .inv-page .kpi-row.cols-2 { grid-template-columns:1fr 1fr; }
+    @media (max-width:520px){ .inv-page .kpi-row.cols-2 { grid-template-columns:1fr; } }
 </style>
 @endpush
 
@@ -39,7 +63,7 @@
         </div>
     @endif
 
-    <div class="kpi-row cols-3">
+    <div class="kpi-row cols-2">
         <div class="kpi-tile" style="--accent:#f59e0b;">
             <div class="kpi-head">
                 <span class="kpi-label">Total Requests</span>
@@ -58,15 +82,6 @@
             </div>
             <p class="kpi-value">{{ number_format($pendingCount) }}</p>
         </div>
-        <div class="kpi-tile" style="--accent:#3b82f6;">
-            <div class="kpi-head">
-                <span class="kpi-label">Department</span>
-                <span class="kpi-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                </span>
-            </div>
-            <p class="kpi-value">{{ session('employee_department', 'Inventory') }}</p>
-        </div>
     </div>
 
     <div class="data-panel">
@@ -84,7 +99,7 @@
                     <option value="rejected">Rejected</option>
                 </select>
             </div>
-            <button onclick="openRequestModal()" style="margin-left:auto;background:#0b1e3d;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <button onclick="openRequestModal()" style="margin-left:auto;background:#1b6fc8;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;flex-shrink:0;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                 New Request
             </button>
@@ -148,14 +163,25 @@
                 </tbody>
             </table>
         </div>
+        <div class="panel-foot">
+            {{ $requests->links() }}
+        </div>
     </div>
 </div>
 
-<div id="requestModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:center;justify-content:center;">
+<div id="requestModal" class="nexora-modal-overlay" style="display:flex;">
     <div class="nexora-modal" style="max-width:520px;">
         <div class="nexora-modal-logo"></div>
         <div class="nexora-modal-header">
-            <h2 class="nexora-modal-title">New Request</h2>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span class="req-type-icon restock" id="headerIconRestock">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a9ee8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                </span>
+                <span class="req-type-icon replacement" id="headerIconReplacement" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </span>
+                <h2 class="nexora-modal-title">New Request</h2>
+            </div>
             <button type="button" onclick="closeRequestModal()" class="nexora-modal-close">&times;</button>
         </div>
         <form method="POST" action="{{ route('inventory.requests.store') }}">
@@ -164,54 +190,69 @@
             <input type="hidden" name="item_id" id="selectedItemId" value="">
             <input type="hidden" name="defect_id" id="selectedDefectId" value="">
 
-            <div style="padding:16px 20px 0 20px;">
+            <div style="padding:0 0 18px 0;">
                 <div class="type-toggle">
                     <button type="button" class="active" onclick="setRequestType('restock')" id="typeRestockBtn">Restock</button>
                     <button type="button" onclick="setRequestType('replacement')" id="typeReplacementBtn">Replacement</button>
                 </div>
             </div>
 
-            <div class="nexora-modal-form" style="margin-top:0;">
+            <div class="nexora-modal-form">
 
                 <div style="grid-column:1/-1;">
                     <label class="nexora-modal-label">Item</label>
 
-                    {{-- Restock fields --}}
                     <div class="restock-fields active" id="restockFields">
-                        <select class="nexora-modal-input" id="restockItemSelect" onchange="onRestockSelect(this)">
-                            <option value="">Select an item...</option>
-                            <optgroup label="— Out of Stock —">
-                                @foreach ($lowStockItems as $item)
-                                    @if($item['status'] === 'Out of Stock')
-                                        <option value="{{ $item['id'] }}" data-name="{{ $item['name'] }}">{{ $item['name'] }} ({{ $item['sku'] }}) <span class="stock-status stock-out">0 available</span></option>
-                                    @endif
+                        <div class="item-list" id="itemList">
+                            @php
+                                $oos = $lowStockItems->where('status','Out of Stock');
+                                $ls = $lowStockItems->where('status','Low Stock');
+                            @endphp
+                            @if($oos->count())
+                                <div class="il-group-header">Out of Stock</div>
+                                @foreach ($oos as $item)
+                                    <div class="il-item" data-id="{{ $item['id'] }}" onclick="selectRestockItem({{ $item['id'] }})">
+                                        <div><span class="il-name">{{ $item['name'] }}</span><span class="il-sku">{{ $item['sku'] }}</span></div>
+                                        <span class="il-stock il-out">0 avail.</span>
+                                    </div>
                                 @endforeach
-                            </optgroup>
-                            <optgroup label="— Low Stock —">
-                                @foreach ($lowStockItems as $item)
-                                    @if($item['status'] === 'Low Stock')
-                                        <option value="{{ $item['id'] }}" data-name="{{ $item['name'] }}">{{ $item['name'] }} ({{ $item['sku'] }}) — {{ $item['total_available'] }} available</option>
-                                    @endif
+                            @endif
+                            @if($ls->count())
+                                <div class="il-group-header">Low Stock</div>
+                                @foreach ($ls as $item)
+                                    <div class="il-item" data-id="{{ $item['id'] }}" onclick="selectRestockItem({{ $item['id'] }})">
+                                        <div><span class="il-name">{{ $item['name'] }}</span><span class="il-sku">{{ $item['sku'] }}</span></div>
+                                        <span class="il-stock il-low">{{ $item['total_available'] }} avail.</span>
+                                    </div>
                                 @endforeach
-                            </optgroup>
-                        </select>
+                            @endif
+                            @if(!$oos->count() && !$ls->count())
+                                <div class="il-empty">No items need restocking</div>
+                            @endif
+                        </div>
+                        <div id="restockStockHint" style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:6px;min-height:16px;"></div>
                         @error('part_name')<p class="nexora-modal-error">{{ $message }}</p>@enderror
                     </div>
 
-                    {{-- Replacement fields --}}
                     <div class="replacement-fields" id="replacementFields">
-                        <select class="nexora-modal-input" id="defectItemSelect" onchange="onDefectSelect(this)">
-                            <option value="">Select a defect item...</option>
-                            @foreach ($defectItems as $item)
-                                <option value="{{ $item->id }}" data-name="{{ $item->part_name }}">{{ $item->part_name }}@if($item->quantity > 1) (x{{ $item->quantity }})@endif@if($item->source) — {{ $item->source }}@endif</option>
-                            @endforeach
-                            <option value="__other__">Other (type manually)</option>
-                        </select>
-                        <input type="text" name="part_name" id="modalPartName" value="{{ old('part_name') }}" placeholder="Type part name..." style="display:none;margin-top:8px;width:100%;padding:10px 12px;border:1px solid #d1d9e6;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;color:#0f172a;box-sizing:border-box;">
+                        <div class="item-list" id="defectList">
+                            @forelse ($defectItems as $item)
+                                <div class="il-item" data-id="{{ $item->id }}" onclick="selectDefectItem({{ $item->id }}, {{ $item->quantity }})">
+                                    <div>
+                                        <span class="il-name">{{ $item->part_name }}</span>
+                                        @if($item->quantity > 1)<span class="il-sku">x{{ $item->quantity }}</span>@endif
+                                        @if($item->source)<span class="il-sku">{{ $item->source }}</span>@endif
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="il-empty">No open defects</div>
+                            @endforelse
+                        </div>
+                        <input type="hidden" name="part_name" id="modalPartName" value="">
                     </div>
                 </div>
 
-                <div>
+                <div style="grid-column:1/-1;">
                     <label class="nexora-modal-label">Quantity</label>
                     <input type="number" name="quantity" id="requestQty" value="{{ old('quantity', 1) }}" required min="1" class="nexora-modal-input">
                     @error('quantity')<p class="nexora-modal-error">{{ $message }}</p>@enderror
@@ -223,11 +264,11 @@
                 </div>
             </div>
             @error('submit')
-                <p style="color:#ef4444;font-size:13px;margin:12px 0 0;padding:10px;background:#fef2f2;border-radius:6px;">{{ $message }}</p>
+                <p style="color:#ef4444;font-size:13px;margin:12px 0 0;padding:10px;background:rgba(239,68,68,0.12);border-radius:8px;">{{ $message }}</p>
             @enderror
             <div class="nexora-modal-actions">
                 <button type="button" onclick="closeRequestModal()" class="nexora-modal-btn-secondary">Cancel</button>
-                <button type="submit" class="nexora-modal-btn-primary" style="background:#0b1e3d;color:#fff;border-color:#0b1e3d;">Submit</button>
+                <button type="submit" class="nexora-modal-btn-primary">Submit Request</button>
             </div>
         </form>
     </div>
@@ -235,6 +276,8 @@
 
 <script>
     var lowStockItems = @json($lowStockItems);
+    var defectItems = @json($defectItems);
+    var selectedRestockId = null;
 
     function setRequestType(type) {
         document.getElementById('requestType').value = type;
@@ -245,51 +288,70 @@
         document.getElementById('restockFields').classList.toggle('active', type === 'restock');
         document.getElementById('replacementFields').classList.toggle('active', type === 'replacement');
 
+        document.getElementById('headerIconRestock').style.display = type === 'restock' ? '' : 'none';
+        document.getElementById('headerIconReplacement').style.display = type === 'replacement' ? '' : 'none';
+
+        clearRestockSelection();
+        clearDefectSelection();
+    }
+
+    function clearDefectSelection() {
+        document.getElementById('selectedDefectId').value = '';
+        document.querySelectorAll('#defectList .il-item').forEach(function(el) { el.classList.remove('selected'); });
+        enableQtyInput();
+    }
+
+    function enableQtyInput() {
+        var qtyInput = document.getElementById('requestQty');
+        qtyInput.readOnly = false;
+        qtyInput.style.opacity = '';
+    }
+
+    function clearRestockSelection() {
         document.getElementById('selectedItemId').value = '';
         document.getElementById('selectedDefectId').value = '';
+        document.getElementById('restockStockHint').textContent = '';
+        document.querySelectorAll('#itemList .il-item').forEach(function(el) { el.classList.remove('selected'); });
+        selectedRestockId = null;
+        enableQtyInput();
     }
 
-    function onRestockSelect(select) {
-        var option = select.options[select.selectedIndex];
-        if (option && option.value) {
-            document.getElementById('selectedItemId').value = option.value;
-            document.getElementById('selectedDefectId').value = '';
-            var qty = document.getElementById('requestQty');
-            if (!qty.value || qty.value == 1) qty.value = 1;
-        }
+    function selectRestockItem(id) {
+        var item = lowStockItems.find(function(i) { return i.id === id; });
+        if (!item) return;
+        document.getElementById('selectedItemId').value = item.id;
+        document.getElementById('selectedDefectId').value = '';
+        document.querySelectorAll('#itemList .il-item').forEach(function(el) {
+            el.classList.toggle('selected', parseInt(el.getAttribute('data-id')) === id);
+        });
+        selectedRestockId = id;
+        var hint = document.getElementById('restockStockHint');
+        hint.textContent = item.status === 'Out of Stock' ? 'Currently out of stock' : item.total_available + ' available across all warehouses';
+        var qty = document.getElementById('requestQty');
+        if (!qty.value || qty.value == 1) qty.value = 1;
     }
 
-    function onDefectSelect(select) {
-        var textInput = document.getElementById('modalPartName');
-        var selectedId = document.getElementById('selectedDefectId');
-
-        if (select.value === '__other__') {
-            textInput.style.display = 'block';
-            textInput.value = '';
-            textInput.focus();
-            selectedId.value = '';
-        } else if (select.value !== '') {
-            textInput.style.display = 'none';
-            selectedId.value = select.value;
-            document.getElementById('selectedItemId').value = '';
-
-            var option = select.options[select.selectedIndex];
-            var qty = document.getElementById('requestQty');
-            if (!qty.value || qty.value == 1) qty.value = 1;
-        } else {
-            textInput.style.display = 'none';
-            selectedId.value = '';
-        }
+    function selectDefectItem(id, qty) {
+        document.getElementById('selectedDefectId').value = id;
+        document.getElementById('selectedItemId').value = '';
+        clearRestockSelection();
+        document.querySelectorAll('#defectList .il-item').forEach(function(el) {
+            el.classList.toggle('selected', parseInt(el.getAttribute('data-id')) === id);
+        });
+        var qtyInput = document.getElementById('requestQty');
+        qtyInput.value = qty;
+        qtyInput.readOnly = true;
+        qtyInput.style.opacity = '0.6';
     }
 
-    @if(old('part_name') && !$defectItems->pluck('part_name')->contains(old('part_name')))
-        (function() {
-            setRequestType('replacement');
-            var s = document.getElementById('defectItemSelect');
-            s.value = '__other__';
-            onDefectSelect(s);
-            document.getElementById('modalPartName').value = '{{ old('part_name') }}';
-        })();
+    @if(old('defect_id') && $defectItems->contains('id', old('defect_id')))
+        document.addEventListener('DOMContentLoaded', function() {
+            var defect = defectItems.find(function(d) { return d.id === {{ (int) old('defect_id') }}; });
+            if (defect) {
+                setRequestType('replacement');
+                selectDefectItem(defect.id, defect.quantity);
+            }
+        });
     @endif
 
     function openRequestModal() {
@@ -303,11 +365,20 @@
         document.getElementById('replacementFields').classList.remove('active');
         document.getElementById('typeRestockBtn').classList.add('active');
         document.getElementById('typeReplacementBtn').classList.remove('active');
+        document.getElementById('headerIconRestock').style.display = '';
+        document.getElementById('headerIconReplacement').style.display = 'none';
+        document.getElementById('restockStockHint').textContent = '';
+        clearRestockSelection();
+        clearDefectSelection();
     }
 
     document.getElementById('requestModal').addEventListener('click', function (e) {
         if (e.target === this) closeRequestModal();
     });
+
+    @if($errors->any())
+        document.addEventListener('DOMContentLoaded', function() { openRequestModal(); });
+    @endif
 
     function filterRequests() {
         var q = document.getElementById('searchInput').value.toLowerCase();
