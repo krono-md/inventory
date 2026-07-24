@@ -46,12 +46,12 @@ class StockMovementController extends Controller
             });
         }
 
-        $movements = $query->paginate(10)->appends($request->query());
+        $allRaw = $query->get();
 
         // Merge transfer movements (which are stored as two rows: from & to) into a single display row.
         // Group by item_id + reference since that's how transfer rows are created.
         $mergedMovements = collect();
-        $transferGroups = $movements->getCollection()->groupBy(fn ($m) => $m->type === 'transfer'
+        $transferGroups = $allRaw->groupBy(fn ($m) => $m->type === 'transfer'
             ? ($m->item_id . '|' . ($m->reference ?? ''))
             : ('__single__|' . $m->id)
         );
@@ -59,7 +59,7 @@ class StockMovementController extends Controller
         // Both legs of a transfer are stored with the same reference and a positive
         // quantity, so direction cannot be recovered from the rows themselves.
         // Resolve it from the originating transfer record instead of guessing.
-        $transferDirections = $this->transferDirections($movements->getCollection());
+        $transferDirections = $this->transferDirections($allRaw);
 
         foreach ($transferGroups as $groupKey => $group) {
             // Skip empty keys
@@ -91,7 +91,7 @@ class StockMovementController extends Controller
             $toName = $transferTo?->warehouse?->name ?? 'Deleted';
 
             // Attach display-only fields consumed by the blade.
-            $base->transfer_warehouses_display = $fromName . ' â‡„ ' . $toName;
+            $base->transfer_warehouses_display = $fromName . ' → ' . $toName;
             $base->transfer_quantity_display = $base->quantity;
 
             $mergedMovements->push($base);
@@ -100,8 +100,19 @@ class StockMovementController extends Controller
         // Sort merged results newest-first
         $mergedMovements = $mergedMovements->sortByDesc('created_at')->values();
 
-        // Replace pagination collection so links stay correct.
-        $movements->setCollection($mergedMovements);
+        // Paginate the merged collection so per-page count is accurate.
+        $page = request()->get('page', 1);
+        $perPage = 10;
+        $totalAfterMerge = $mergedMovements->count();
+        $displayItems = $mergedMovements->forPage($page, $perPage)->values();
+
+        $movements = new \Illuminate\Pagination\LengthAwarePaginator(
+            $displayItems,
+            $totalAfterMerge,
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
         $totals = [
             'inbound' => StockMovement::where('type', 'inbound')->sum('quantity'),
@@ -132,7 +143,7 @@ class StockMovementController extends Controller
             ->pluck('reference')
             ->filter()
             ->unique()
-            ->map(fn ($reference) => (int) ltrim((string) str_replace('TRF-', '', $reference), '0'))
+            ->map(fn ($reference) => (int) (explode('-', $reference)[2] ?? 0))
             ->filter()
             ->values()
             ->all();

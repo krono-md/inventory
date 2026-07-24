@@ -842,5 +842,9 @@
   box-shadow: 0 0 0 3px rgba(74, 158, 232, 0.25);
 }
 
+.type-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.2px;}
+.type-pill.type-restock{background:#e8f8f1;color:#188a5b;}
+.type-pill.type-replacement{background:#fef3e2;color:#c27a0e;}
+
 
 

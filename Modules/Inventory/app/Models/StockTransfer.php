@@ -59,7 +59,7 @@ class StockTransfer extends Model
 
     public function getReferenceAttribute(): string
     {
-        return 'TRF-' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+        return 'TRF-' . $this->created_at->format('Y') . '-' . str_pad((string) $this->id, 4, '0', STR_PAD_LEFT);
     }
 }
 

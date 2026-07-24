@@ -29,10 +29,13 @@ Route::middleware('inventory.access')->name('inventory.')->group(function (): vo
     Route::get('/item-catalog', [ItemCatalogController::class, 'index'])->name('item-catalog');
     Route::post('/item-catalog', [ItemCatalogController::class, 'store'])->name('item-catalog.store');
     Route::delete('/item-catalog/{item}', [ItemCatalogController::class, 'destroy'])->name('item-catalog.destroy');
+    Route::post('/item-catalog/{item}/verify-password', [ItemCatalogController::class, 'verifyPassword'])->name('item-catalog.verify-password');
     Route::post('/item-catalog/packing-material', [ItemCatalogController::class, 'storePackingMaterial'])->name('item-catalog.packing.store');
     Route::delete('/item-catalog/packing-material/{id}', [ItemCatalogController::class, 'destroyPackingMaterial'])->name('item-catalog.packing.destroy');
 
     Route::get('/requests', [RequestController::class, 'index'])->name('requests');
+    Route::get('/requests/restock-items', [RequestController::class, 'restockItems'])->name('requests.restock-items');
+    Route::get('/requests/replacement-items', [RequestController::class, 'replacementItems'])->name('requests.replacement-items');
     Route::post('/requests', [RequestController::class, 'store'])->name('requests.store');
 
     Route::get('/stock-movement', [StockMovementController::class, 'index'])->name('stock-movement');

@@ -14,9 +14,18 @@ class InventoryAccess
             return $next($request);
         }
 
-        if (! session('employee_logged_in') || ! session('employee_client_id')) {
+        if (! session('employee_logged_in') && ! session('employee_client_id')) {
             return redirect()->route('login')->withErrors([
                 'username' => 'Sign in with your approved HR employee account to access Inventory.',
+            ]);
+        }
+
+        $position = strtolower((string) session('employee_position', ''));
+        $department = strtolower((string) session('employee_department', ''));
+
+        if (! str_contains($department, 'inventory') && ! str_contains($position, 'warehouse')) {
+            return redirect()->route('login')->withErrors([
+                'username' => 'Your account does not have Inventory access.',
             ]);
         }
 

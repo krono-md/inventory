@@ -83,7 +83,7 @@ class DashboardController extends Controller
             $toName = $to?->warehouse?->name ?? 'Deleted';
 
             // Attach display-only value used by index.blade.php (expects a string in ['warehouse']).
-            $base->transfer_warehouses_display = $fromName . ' â†’ ' . $toName;
+            $base->transfer_warehouses_display = $fromName . ' → ' . $toName;
 
             return $base;
         })->sortByDesc('created_at')->values();
@@ -155,7 +155,7 @@ class DashboardController extends Controller
             $dayMovements = $movements->filter(fn ($m) => $m->created_at->isSameDay($day));
             $inbound[] = $dayMovements->whereIn('type', ['inbound'])->sum('quantity');
             $outbound[] = $dayMovements->whereIn('type', ['outbound'])->sum('quantity');
-            $adjustments[] = $dayMovements->whereIn('type', ['adjustment'])->sum('quantity');
+            $adjustments[] = $dayMovements->whereIn('type', ['adjustment'])->sum(fn ($m) => abs($m->quantity));
             
             // For transfers, count each unique transfer only once (they're stored as two records)
             $transferMovements = $dayMovements->where('type', 'transfer');

@@ -4,27 +4,19 @@
 
 @push('styles')
     <style>
-        .expand-row { display: none; }
-        .expand-row.open { display: table-row; }
-        .expand-toggle { cursor: pointer; transition: transform 0.2s ease; display: inline-block; }
-        .expand-toggle.open { transform: rotate(90deg); }
-        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
-        .status-In.Stock { background: #dcfce7; color: #166534; }
-        .status-Low.Stock { background: #fef9c3; color: #854d0e; }
-        .status-Out.of.Stock { background: #fee2e2; color: #991b1b; }
-
-        /* Expandable sub-table animation */
         .expand-row {
             display: none;
             opacity: 0;
             transform: translateY(-6px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .expand-row.open {
             display: table-row;
             opacity: 1;
             transform: translateY(0);
         }
+        .expand-toggle { cursor: pointer; transition: transform 0.2s ease; display: inline-block; }
+        .expand-toggle.open { transform: rotate(90deg); }
 
         /* Catalog tables keep manual striping + the expandable sub-table, so
            they use .catalog-table (a lighter grid) rather than .data-grid to
@@ -34,16 +26,82 @@
             background: #13315c; color: #cdd9ee; font-size: 11px; font-weight: 700;
             letter-spacing: 0.05em; text-transform: uppercase; padding: 12px 8px;
         }
+
+        /* Expandable sub-table */
+        .expand-cell { padding: 0 !important; }
+        .expand-inner { padding: 14px 16px 16px 40px; background: #f8fafc; }
+        .expand-table { width: 100%; border-collapse: collapse; }
+        .expand-table thead th {
+            padding: 9px 10px 7px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.06em; color: #64748b; border-bottom: 1.5px solid #e2e8f0;
+            background: transparent;
+        }
+        .expand-table thead th:first-child { text-align: left; }
+        .expand-table thead th:not(:first-child) { text-align: center; }
+        .expand-table tbody tr { transition: background 0.15s ease; }
+        .expand-table tbody tr:hover { background: #f1f5f9; }
+        .expand-table tbody tr:last-child td { border-bottom: none; }
+        .expand-table td {
+            padding: 9px 10px; font-size: 12px; color: #0f172a;
+            border-bottom: 1px solid #e2e8f0; vertical-align: middle;
+        }
+        .expand-table td:first-child { font-weight: 500; }
+        .expand-table td:not(:first-child) { text-align: center; }
+        .expand-table .td-reserved { color: #dc2626; font-weight: 600; }
+        .expand-empty { text-align: center; padding: 14px; color: #94a3b8; font-size: 12px; }
+        .threshold-wrap { display: inline-flex; align-items: center; gap: 6px; }
+        .threshold-input {
+            padding: 5px 8px; background: #fff; color: #0f172a;
+            border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px;
+            text-align: center; outline: none; font-family: 'Inter', sans-serif;
+            width: 56px; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .threshold-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+
+        /* Delete warning modal — high-impact deterrent */
+        .del-warning-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: rgba(239,68,68,0.18); color: #fca5a5;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .del-warning-icon svg { width: 24px; height: 24px; }
+        .del-item-badge {
+            display: inline-block; margin-top: 8px; padding: 6px 14px;
+            background: rgba(239,68,68,0.12); color: #fca5a5;
+            border: 1px solid rgba(239,68,68,0.25); border-radius: 8px;
+            font-size: 13px; font-weight: 600;
+        }
+        .del-consequences { margin: 16px 0 0; padding: 0; list-style: none; }
+        .del-consequences li {
+            position: relative; padding: 5px 0 5px 18px; font-size: 13px;
+            color: rgba(255,255,255,0.72); line-height: 1.5;
+        }
+        .del-consequences li::before {
+            content: ''; position: absolute; left: 0; top: 12px;
+            width: 6px; height: 6px; border-radius: 50%; background: #ef4444;
+        }
+        .del-consequences li:last-child {
+            margin-top: 8px; font-weight: 700; color: #fca5a5;
+        }
+        .del-consequences li:last-child::before { background: #fca5a5; }
+        .del-divider {
+            height: 1px; background: linear-gradient(90deg, transparent, rgba(239,68,68,0.3), transparent);
+            margin: 18px 0 0;
+        }
+        .del-btn-permanent {
+            background: #dc2626 !important; color: #fff !important; border-color: #991b1b !important;
+            animation: delPulse 1.8s ease-in-out infinite;
+        }
+        .del-btn-permanent:hover { background: #b91c1c !important; animation: none !important; }
+        @keyframes delPulse {
+            0%, 100% { box-shadow: 0 4px 12px -4px rgba(220,38,38,0.4); }
+            50% { box-shadow: 0 4px 20px 0 rgba(220,38,38,0.7); }
+        }
     </style>
 @endpush
 
 @section('content')
 <div class="inv-page">
-    @if(session('success'))
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(34,197,94,0.15);color:#22c55e;border-radius:10px;font-weight:600;">
-            {{ session('success') }}
-        </div>
-    @endif
 
     <!-- KPI tiles -->
     <div class="kpi-row cols-3">
@@ -79,9 +137,9 @@
     <!-- Inventory Items Card -->
     <div class="data-panel">
         <form method="GET" action="{{ route('inventory.item-catalog') }}" class="data-toolbar">
-            <div style="display:flex;gap:4px;background:#e2e8f0;border-radius:8px;padding:3px;flex-shrink:0;">
-                <button type="button" id="catTabItems" onclick="switchCatTab('items')" style="padding:6px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;background:#0b1e3d;color:#fff;">Items</button>
-                <button type="button" id="catTabPacking" onclick="switchCatTab('packing')" style="padding:6px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;background:transparent;color:#64748b;">Packing</button>
+            <div class="inv-tabs" style="flex-shrink:0;" role="tablist" aria-label="Catalog section">
+                <button type="button" id="catTabItems" class="inv-tab active" role="tab" aria-selected="true" onclick="switchCatTab('items')">Items</button>
+                <button type="button" id="catTabPacking" class="inv-tab" role="tab" aria-selected="false" onclick="switchCatTab('packing')">Packing</button>
             </div>
             <div id="itemsFilters" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
                 <div class="tb-search">
@@ -151,44 +209,48 @@
                                 <span style="background:{{ $colors['bg'] }};color:{{ $colors['text'] }};font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">{{ $item['status'] }}</span>
                             </td>
                             <td style="text-align:center;padding:12px 4px;">
-                                <button onclick="openDeleteModal({{ $item['id'] }}, '{{ $item['sku'] }}', '{{ addslashes($item['name']) }}')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:13px;padding:4px 8px;" title="Delete item">🗑</button>
+                                <button type="button" class="inv-btn inv-btn-quiet-danger inv-btn-icon inv-btn-sm" title="Delete item" aria-label="Delete {{ $item['name'] }}" onclick="event.stopPropagation();openDeleteModal({{ $item['id'] }}, '{{ $item['sku'] }}', '{{ addslashes($item['name']) }}')">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
                             </td>
                         </tr>
                         <tr class="expand-row" id="expand-{{ $loop->index }}">
-                            <td colspan="8" style="padding:0 16px 16px 40px;background:#f8fafc;">
-                                <table style="width:100%;border-collapse:collapse;margin-top:4px;">
-                                    <thead>
-                                        <tr style="border-bottom:2px solid #e2e8f0;">
-                                            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Warehouse</th>
-                                            <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Available</th>
-                                            <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Reserved</th>
-                                            <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Reorder Threshold</th>
-                                            <th style="text-align:center;padding:8px 10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse ($item['stock_breakdown'] ?? [] as $row)
-                                        <tr style="border-bottom:1px solid #e2e8f0;background:#ffffff;">
-                                            <td style="padding:8px 10px;font-size:12px;color:#0f172a;">{{ $row['warehouse'] }}</td>
-                                            <td style="text-align:center;padding:8px 10px;font-size:12px;color:#0f172a;font-weight:600;">{{ $row['available'] }}</td>
-                                            <td style="text-align:center;padding:8px 10px;font-size:12px;color:#dc2626;">{{ $row['reserved'] }}</td>
-                                            <td style="padding:6px 10px;" onclick="event.stopPropagation()">
-                                                <form method="POST" action="{{ route('inventory.stock-levels.update', $row['stock_level_id']) }}" style="display:inline-flex;align-items:center;gap:4px;">
-                                                    @csrf @method('PATCH')
-                                                    <input type="number" name="reorder_threshold" value="{{ $row['reorder_threshold'] }}" min="0" style="min-width:48px;width:calc({{ max(1, strlen((string) $row['reorder_threshold'])) }}ch + 22px);padding:5px 8px;background:#fff;color:#0f172a;border:1px solid #94a3b8;border-radius:6px;font-size:12px;text-align:center;outline:none;">
-                                                    <button type="submit" style="background:#1b6fc8;color:#fff;border:none;border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;font-weight:600;">Save</button>
-                                                </form>
-                                            </td>
-                                            <td style="text-align:center;padding:8px 10px;">
-                                                @php $slColors = ['In Stock'=>['bg'=>'#dcfce7','text'=>'#166534'],'Low Stock'=>['bg'=>'#fef9c3','text'=>'#854d0e'],'Out of Stock'=>['bg'=>'#fee2e2','text'=>'#991b1b']]; $slc = $slColors[$row['status']] ?? ['bg'=>'#e2e8f0','text'=>'#64748b']; @endphp
-                                                <span style="background:{{ $slc['bg'] }};color:{{ $slc['text'] }};font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;">{{ $row['status'] }}</span>
-                                            </td>
-                                        </tr>
-                                        @empty
-                                        <tr><td colspan="5" style="text-align:center;padding:12px;color:#94a3b8;font-size:12px;">No stock records.</td></tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
+                            <td colspan="8" class="expand-cell">
+                                <div class="expand-inner">
+                                    <table class="expand-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Warehouse</th>
+                                                <th>Available</th>
+                                                <th>Reserved</th>
+                                                <th>Reorder Threshold</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse ($item['stock_breakdown'] ?? [] as $row)
+                                            <tr>
+                                                <td>{{ $row['warehouse'] }}</td>
+                                                <td>{{ $row['available'] }}</td>
+                                                <td class="td-reserved">{{ $row['reserved'] }}</td>
+                                                <td onclick="event.stopPropagation()">
+                                                    <form method="POST" action="{{ route('inventory.stock-levels.update', $row['stock_level_id']) }}" class="threshold-wrap">
+                                                        @csrf @method('PATCH')
+                                                        <input type="number" name="reorder_threshold" value="{{ $row['reorder_threshold'] }}" min="0" class="threshold-input">
+                                                        <button type="submit" class="inv-btn inv-btn-primary inv-btn-xs">Save</button>
+                                                    </form>
+                                                </td>
+                                                <td>
+                                                    @php $slColors = ['In Stock'=>['bg'=>'#dcfce7','text'=>'#166534'],'Low Stock'=>['bg'=>'#fef9c3','text'=>'#854d0e'],'Out of Stock'=>['bg'=>'#fee2e2','text'=>'#991b1b']]; $slc = $slColors[$row['status']] ?? ['bg'=>'#e2e8f0','text'=>'#64748b']; @endphp
+                                                    <span style="background:{{ $slc['bg'] }};color:{{ $slc['text'] }};font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;">{{ $row['status'] }}</span>
+                                                </td>
+                                            </tr>
+                                            @empty
+                                            <tr><td colspan="5" class="expand-empty">No stock records.</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -234,7 +296,9 @@
                             <td style="text-align:center;padding:12px 6px;">
                                 <form method="POST" action="{{ route('inventory.item-catalog.packing.destroy', $pm->id) }}" onsubmit="return confirm('Delete this packing material?')" style="display:inline;">
                                     @csrf @method('DELETE')
-                                    <button type="submit" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:13px;padding:4px 8px;">🗑</button>
+                                    <button type="submit" class="inv-btn inv-btn-quiet-danger inv-btn-icon inv-btn-sm" title="Delete packing material" aria-label="Delete {{ $pm->name }}">
+                                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
                                 </form>
                             </td>
                         </tr>
@@ -247,46 +311,152 @@
         </div>
     </div>
 </div>
-<div id="deleteModal" class="nexora-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:center;justify-content:center;">
-    <div class="nexora-modal" style="max-width:460px;">
+<div id="deleteWarningModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deleteWarningTitle">
+    <div class="nexora-modal nexora-modal-sm">
         <div class="nexora-modal-logo"></div>
         <div class="nexora-modal-header">
-            <h2 class="nexora-modal-title" style="color:#dc2626;">Delete Item</h2>
-            <button type="button" onclick="closeDeleteModal()" class="nexora-modal-close">&times;</button>
-        </div>
-        <div style="padding:4px 0 12px;font-size:13px;color:#cdd9ee;line-height:1.7;">
-            <p style="margin:0 0 8px;">This action <strong>cannot be undone</strong>.</p>
-            <p style="margin:0;"><strong id="deleteItemName" style="color:#f87171;"></strong> will be permanently removed along with all stock levels, movement history, adjustments, transfers, and reservations.</p>
-        </div>
-        <form id="deleteForm" method="POST" action="">
-            @csrf @method('DELETE')
-            <div class="nexora-modal-actions">
-                <button type="button" onclick="closeDeleteModal()" class="nexora-modal-btn-secondary">Cancel</button>
-                <button type="submit" class="nexora-modal-btn-primary" style="background:#dc2626;color:#fff;border-color:#dc2626;">Delete</button>
+            <div class="nexora-modal-heading">
+                <span class="del-warning-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"/></svg>
+                </span>
+                <h2 id="deleteWarningTitle" class="nexora-modal-title" style="color:#f87171;font-size:18px;">Permanent Deletion</h2>
             </div>
-        </form>
+            <button type="button" onclick="closeDeleteWarningModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="nexora-modal-text">
+            <p style="margin:0;font-weight:600;color:#fca5a5;">This action <u>cannot</u> be undone.</p>
+            <div class="del-item-badge">
+                <span id="deleteWarningItemName"></span>
+            </div>
+            <div class="del-divider"></div>
+            <ul class="del-consequences">
+                <li>Stock levels across all warehouses will be destroyed</li>
+                <li>Complete movement history will be erased</li>
+                <li>All adjustments, transfers, and reservations will be permanently removed</li>
+                <li>This item and every associated record will be lost forever</li>
+            </ul>
+        </div>
+        <div class="nexora-modal-actions">
+            <button type="button" onclick="closeDeleteWarningModal()" class="nexora-modal-btn-secondary">Cancel</button>
+            <button type="button" onclick="proceedToPasswordModal()" class="nexora-modal-btn-primary del-btn-permanent">Yes, delete permanently</button>
+        </div>
     </div>
 </div>
 
-<script>
-    function openDeleteModal(id, sku, name) {
-        document.getElementById('deleteItemName').textContent = sku + ' - ' + name;
-        document.getElementById('deleteForm').action = '{{ url("inventory/item-catalog") }}' + '/' + id;
-        document.getElementById('deleteModal').style.display = 'flex';
-    }
-
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').style.display = 'none';
-    }
-
-    document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) closeDeleteModal();
-    });
-</script>
+<div id="deletePasswordModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="deletePasswordTitle">
+    <div class="nexora-modal nexora-modal-sm">
+        <div class="nexora-modal-logo"></div>
+        <div class="nexora-modal-header">
+            <div class="nexora-modal-heading">
+                <span class="nexora-modal-icon nexora-modal-icon-red">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                </span>
+                <h2 id="deletePasswordTitle" class="nexora-modal-title" style="color:#f87171;">Confirm Password</h2>
+            </div>
+            <button type="button" onclick="closeDeletePasswordModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="nexora-modal-text">
+            <p style="margin:0 0 16px;">Enter your password to confirm deletion.</p>
+            <input type="password" id="deletePasswordInput" class="nexora-modal-input" placeholder="Enter password" autocomplete="off" style="width:100%;">
+            <div id="deletePasswordError" class="nexora-modal-error" style="display:none;"></div>
+        </div>
+        <form id="deleteForm" method="POST" action="" style="display:none;">
+            @csrf @method('DELETE')
+        </form>
+        <div class="nexora-modal-actions">
+            <button type="button" onclick="closeDeletePasswordModal()" class="nexora-modal-btn-secondary">Cancel</button>
+            <button type="button" id="deleteConfirmBtn" onclick="confirmDelete()" class="nexora-modal-btn-primary nexora-modal-btn-danger">Confirm</button>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
+    let deleteItemId = null;
+    let deleteItemSku = null;
+
+    function openDeleteModal(id, sku, name) {
+        deleteItemId = id;
+        deleteItemSku = sku;
+        document.getElementById('deleteWarningItemName').textContent = sku + ' - ' + name;
+        document.getElementById('deleteWarningModal').classList.add('open');
+    }
+
+    function closeDeleteWarningModal() {
+        document.getElementById('deleteWarningModal').classList.remove('open');
+    }
+
+    function proceedToPasswordModal() {
+        closeDeleteWarningModal();
+        document.getElementById('deletePasswordInput').value = '';
+        document.getElementById('deletePasswordError').style.display = 'none';
+        document.getElementById('deleteConfirmBtn').disabled = false;
+        document.getElementById('deleteConfirmBtn').textContent = 'Confirm';
+        document.getElementById('deletePasswordModal').classList.add('open');
+        setTimeout(function () {
+            document.getElementById('deletePasswordInput').focus();
+        }, 250);
+    }
+
+    function closeDeletePasswordModal() {
+        document.getElementById('deletePasswordModal').classList.remove('open');
+    }
+
+    function confirmDelete() {
+        var password = document.getElementById('deletePasswordInput').value;
+        var btn = document.getElementById('deleteConfirmBtn');
+        var errorEl = document.getElementById('deletePasswordError');
+
+        if (!password) {
+            errorEl.textContent = 'Please enter your password.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+        errorEl.style.display = 'none';
+
+        fetch('{{ url("inventory/item-catalog") }}' + '/' + deleteItemId + '/verify-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ password: password })
+        })
+        .then(function (res) {
+            if (res.ok) return res.json();
+            return res.json().then(function (data) { throw data; });
+        })
+        .then(function () {
+            document.getElementById('deleteForm').action = '{{ url("inventory/item-catalog") }}' + '/' + deleteItemId;
+            document.getElementById('deleteForm').submit();
+        })
+        .catch(function (data) {
+            errorEl.textContent = data.error || 'An error occurred. Please try again.';
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Confirm';
+        });
+    }
+
+    document.getElementById('deleteWarningModal').addEventListener('click', function (e) {
+        if (e.target === this) closeDeleteWarningModal();
+    });
+
+    document.getElementById('deletePasswordModal').addEventListener('click', function (e) {
+        if (e.target === this) closeDeletePasswordModal();
+    });
+
+    document.getElementById('deletePasswordInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmDelete();
+        }
+    });
+
     function toggleExpand(index) {
         document.getElementById('expand-' + index).classList.toggle('open');
         document.getElementById('toggle-' + index).classList.toggle('open');
@@ -299,17 +469,16 @@
         const packingSection = document.getElementById('packingTableSection');
         const itemsFilters = document.getElementById('itemsFilters');
 
-        if (tab === 'items') {
-            tabItems.style.background = '#0b1e3d'; tabItems.style.color = '#fff';
-            tabPacking.style.background = 'transparent'; tabPacking.style.color = '#64748b';
-            itemsSection.style.display = 'block'; packingSection.style.display = 'none';
-            itemsFilters.style.display = 'flex';
-        } else {
-            tabPacking.style.background = '#0b1e3d'; tabPacking.style.color = '#fff';
-            tabItems.style.background = 'transparent'; tabItems.style.color = '#64748b';
-            packingSection.style.display = 'block'; itemsSection.style.display = 'none';
-            itemsFilters.style.display = 'none';
-        }
+        const showItems = tab === 'items';
+
+        tabItems.classList.toggle('active', showItems);
+        tabPacking.classList.toggle('active', !showItems);
+        tabItems.setAttribute('aria-selected', showItems ? 'true' : 'false');
+        tabPacking.setAttribute('aria-selected', showItems ? 'false' : 'true');
+
+        itemsSection.style.display = showItems ? 'block' : 'none';
+        packingSection.style.display = showItems ? 'none' : 'block';
+        itemsFilters.style.display = showItems ? 'flex' : 'none';
     }
 </script>
 @endpush

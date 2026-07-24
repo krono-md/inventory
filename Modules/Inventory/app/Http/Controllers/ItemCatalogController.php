@@ -8,8 +8,10 @@ use Modules\Inventory\Models\Category;
 use Modules\Inventory\Models\Item;
 use Modules\Inventory\Models\OrderFulfillment;
 use Modules\Inventory\Models\OrderReservation;
+use Modules\Inventory\Models\StockAdjustment;
 use Modules\Inventory\Models\StockLevel;
 use Modules\Inventory\Models\StockMovement;
+use Modules\Inventory\Models\StockTransfer;
 use Modules\Inventory\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -65,13 +67,15 @@ class ItemCatalogController extends Controller
                 'name' => $item->name,
                 'category' => $item->category?->name ?? 'â€”',
                 'warehouses' => $item->stockLevels->filter(fn ($sl) => $sl->stock > 0 && $sl->warehouse)->map(fn ($sl) => $sl->warehouse->name)->implode(', '),
-                'total_stock' => $item->stockLevels->sum('stock') - $item->stockLevels->sum('reserved_quantity'),
+                'total_available' => $item->stockLevels->sum('stock') - $item->stockLevels->sum('reserved_quantity'),
+                'total_stock' => $item->stockLevels->sum('stock'),
                 'unit_cost' => $item->unit_cost,
                 'status' => $item->status,
                 'stock_breakdown' => $item->stockLevels->filter(fn ($sl) => $sl->warehouse)->map(fn ($sl) => [
                     'stock_level_id' => $sl->id,
                     'warehouse' => $sl->warehouse->name,
-                    'on_hand' => $sl->stock - $sl->reserved_quantity,
+                    'available' => $sl->stock - $sl->reserved_quantity,
+                    'on_hand' => $sl->stock,
                     'reserved' => $sl->reserved_quantity,
                     'reorder_threshold' => $sl->reorder_threshold,
                     'status' => $sl->status_label,
@@ -115,45 +119,75 @@ class ItemCatalogController extends Controller
             'reorder_threshold' => 'nullable|integer|min:0',
         ]);
 
-        $item = DB::connection('inventory')->transaction(function () use ($validated) {
-            $item = Item::create([
-                'sku' => $validated['sku'],
-                'name' => $validated['name'],
-                'category_id' => $validated['category_id'],
-                'unit_cost' => $validated['unit_cost'],
+        $item = Item::create([
+            'sku' => $validated['sku'],
+            'name' => $validated['name'],
+            'category_id' => $validated['category_id'],
+            'unit_cost' => $validated['unit_cost'],
+        ]);
+
+        if (!empty($validated['warehouse_id']) && ($validated['initial_stock'] ?? 0) > 0) {
+            StockLevel::create([
+                'item_id' => $item->id,
+                'warehouse_id' => $validated['warehouse_id'],
+                'stock' => $validated['initial_stock'],
+                'reserved_quantity' => 0,
+                'reorder_threshold' => $validated['reorder_threshold'] ?? 10,
             ]);
 
-            if (!empty($validated['warehouse_id']) && ($validated['initial_stock'] ?? 0) > 0) {
-                $stockLevel = StockLevel::create([
-                    'item_id' => $item->id,
-                    'warehouse_id' => $validated['warehouse_id'],
-                    'stock' => $validated['initial_stock'],
-                    'reserved_quantity' => 0,
-                    'reorder_threshold' => $validated['reorder_threshold'] ?? 10,
-                ]);
+            StockMovement::create([
+                'type' => 'inbound',
+                'item_id' => $item->id,
+                'warehouse_id' => $validated['warehouse_id'],
+                'quantity' => $validated['initial_stock'],
+                'reference' => 'INIT-' . $item->sku,
+                'notes' => 'Initial stock on creation',
+                'performed_by' => session('employee_id'),
+                'created_at' => now(),
+            ]);
+        }
 
-                StockMovement::create([
-                    'type' => 'inbound',
-                    'item_id' => $item->id,
-                    'warehouse_id' => $validated['warehouse_id'],
-                    'quantity' => $validated['initial_stock'],
-                    'reference' => 'INIT-' . $item->sku,
-                    'notes' => 'Initial stock on creation',
-                    'performed_by' => session('employee_id'),
-                    'created_at' => now(),
-                ]);
-            }
-
-            return $item;
-        });
-
-        app(ErpIntegrationService::class)->inventoryAvailabilityChanged(
-            (int) session('employee_client_id'),
-            (int) $item->id,
-            'inventory.item_created'
-        );
+        try {
+            app(ErpIntegrationService::class)->inventoryAvailabilityChanged(
+                (int) session('employee_client_id'),
+                (int) $item->id,
+                'inventory.item_created'
+            );
+        } catch (\Throwable $e) {
+            // Ecommerce/BI credentials may be unconfigured — non-blocking
+        }
 
         return redirect()->route('inventory.item-catalog')->with('success', "Item '{$item->sku}' created successfully.");
+    }
+
+    public function verifyPassword(Request $request)
+    {
+        $request->validate(['password' => 'required|string']);
+
+        $employeeId = session('employee_id');
+        if (!$employeeId) {
+            return response()->json(['error' => 'No authenticated employee session.'], 403);
+        }
+
+        $employee = \Illuminate\Support\Facades\DB::connection('hr')
+            ->table('employees')
+            ->where('id', $employeeId)
+            ->first();
+
+        if (!$employee || !$employee->temporary_password) {
+            return response()->json(['error' => 'Employee record not found.'], 404);
+        }
+
+        $stored = (string) $employee->temporary_password;
+        $valid = str_starts_with($stored, '$')
+            ? \Illuminate\Support\Facades\Hash::check($request->password, $stored)
+            : hash_equals($stored, $request->password);
+
+        if (!$valid) {
+            return response()->json(['error' => 'Incorrect password.'], 422);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     public function destroy(Request $request, Item $item)
@@ -167,8 +201,23 @@ class ItemCatalogController extends Controller
         }
 
         $sku = $item->sku;
-        app(ErpIntegrationService::class)->inventoryProductDeleted((int) session('employee_client_id'), $item);
+        $clientId = (int) session('employee_client_id');
+
+        StockMovement::where('item_id', $item->id)->delete();
+        StockAdjustment::where('item_id', $item->id)->delete();
+        StockTransfer::where('item_id', $item->id)->delete();
+        OrderReservation::where('item_id', $item->id)->delete();
+        StockLevel::where('item_id', $item->id)->delete();
+
         $item->delete();
+
+        // Notified after the delete commits, so a failed transaction cannot leave
+        // downstream modules believing the product is gone.
+        try {
+            app(ErpIntegrationService::class)->inventoryProductDeleted($clientId, $item);
+        } catch (\Throwable $e) {
+            // Ecommerce/BI credentials may be unconfigured — non-blocking
+        }
 
         return redirect()->route('inventory.item-catalog')->with('success', "Item '{$sku}' deleted successfully.");
     }

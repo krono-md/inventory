@@ -9,24 +9,11 @@
     .status-approved { background: #dcfce7; color: #166534; }
     .status-rejected { background: #fee2e2; color: #991b1b; }
     .status-cancelled { background: #e2e8f0; color: #475569; }
-
-    #transferModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    #transferModal.open { opacity: 1; pointer-events: auto; }
 </style>
 @endpush
 
 @section('content')
 <div class="inv-page">
-    @if(session('success'))
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(34,197,94,0.15);color:#22c55e;border-radius:10px;font-weight:600;">
-            {{ session('success') }}
-        </div>
-    @endif
-    @if(session('error'))
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.15);color:#ef4444;border-radius:10px;font-weight:600;">
-            {{ session('error') }}
-        </div>
-    @endif
 
     <!-- KPI tiles -->
     <div class="kpi-row cols-3">
@@ -65,7 +52,7 @@
             <span class="panel-title">Transfer History</span>
             <span class="panel-count">{{ number_format($transfers->total()) }} records</span>
             <div class="panel-head-actions">
-                <button type="button" onclick="openTransferModal()" class="tb-clear" style="background:#1b6fc8;color:#fff;border-color:#1b6fc8;font-weight:600;">
+                <button type="button" onclick="openTransferModal()" class="inv-btn inv-btn-primary inv-btn-sm">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     New Transfer
                 </button>
@@ -139,25 +126,21 @@
                                     <p style="color:#ef4444;font-size:11px;margin:0 0 6px 0;">{{ $message }}</p>
                                 @enderror
                                 @if($transfer->status === 'pending')
-                                    @if($transfer->requested_by_user_id !== Auth::id())
-                                        <form method="POST" action="{{ route('inventory.stock-transfers.approve', $transfer) }}" style="display:inline;" onsubmit="return confirm('Approve this transfer?')">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">Approve</button>
-                                        </form>
-                                        <form method="POST" action="{{ route('inventory.stock-transfers.reject', $transfer) }}" style="display:inline;" onsubmit="return confirm('Reject this transfer?')">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" style="background:#991b1b;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">Reject</button>
-                                        </form>
-                                    @else
-                                        <span style="color:#94a3b8;font-size:12px;">Awaiting review</span>
-                                        <form method="POST" action="{{ route('inventory.stock-transfers.cancel', $transfer) }}" style="display:inline;" onsubmit="return confirm('Cancel this transfer request?')">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">Cancel</button>
-                                        </form>
-                                    @endif
+                                    <form method="POST" action="{{ route('inventory.stock-transfers.approve', $transfer) }}" style="display:inline;" onsubmit="return confirm('Approve this transfer?')">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="inv-btn inv-btn-success inv-btn-xs">Approve</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('inventory.stock-transfers.reject', $transfer) }}" style="display:inline;" onsubmit="return confirm('Reject this transfer?')">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="inv-btn inv-btn-danger inv-btn-xs">Reject</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('inventory.stock-transfers.cancel', $transfer) }}" style="display:inline;" onsubmit="return confirm('Cancel this transfer request?')">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="inv-btn inv-btn-neutral inv-btn-xs">Cancel</button>
+                                    </form>
                                 @else
                                     <span style="color:#94a3b8;font-size:12px;">—</span>
                                 @endif
@@ -177,12 +160,17 @@
     </div>
 </div>
 
-    <div id="transferModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:20;align-items:center;justify-content:center;">
+    <div id="transferModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="newTransferTitle">
         <div class="nexora-modal">
             <div class="nexora-modal-logo"></div>
             <div class="nexora-modal-header">
-                <h2 class="nexora-modal-title">New Stock Transfer</h2>
-                <button type="button" onclick="closeTransferModal()" class="nexora-modal-close">&times;</button>
+                <div class="nexora-modal-heading">
+                    <span class="nexora-modal-icon nexora-modal-icon-blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+                    </span>
+                    <h2 id="newTransferTitle" class="nexora-modal-title">New Stock Transfer</h2>
+                </div>
+                <button type="button" onclick="closeTransferModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
             </div>
 
             <form method="POST" action="{{ route('inventory.stock-transfers.store') }}" novalidate>

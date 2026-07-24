@@ -147,7 +147,7 @@
                             </td>
                             <td>
                                 @if ($movement->type === 'transfer')
-                                    {{ $movement->transfer_warehouses_display ? str_replace(' ⇄ ', ' → ', $movement->transfer_warehouses_display) : 'N/A' }}
+                                    {{ $movement->transfer_warehouses_display ?? 'N/A' }}
                                 @else
                                     {{ $movement->warehouse?->name ?? 'N/A' }}
                                 @endif

@@ -9,13 +9,14 @@ use Modules\Inventory\Models\StockLevel;
 use Modules\Inventory\Models\StockMovement;
 use Modules\Inventory\Models\StockTransfer;
 use Modules\Inventory\Models\Warehouse;
+use Modules\Inventory\Http\Controllers\Concerns\HasInventoryPermissions;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StockTransferController extends Controller
 {
+    use HasInventoryPermissions;
     public function index(Request $request)
     {
         $query = StockTransfer::with(['item', 'fromWarehouse', 'toWarehouse', 'approver', 'requester']);
@@ -113,8 +114,8 @@ class StockTransferController extends Controller
             return back()->withErrors(["trf_action_{$transfer->id}" => 'This transfer has already been processed.']);
         }
 
-        if ($transfer->requested_by === auth()->id()) {
-            return back()->withErrors(["trf_action_{$transfer->id}" => 'You cannot approve your own transfer request.']);
+        if (! $this->isInventoryManager()) {
+            return back()->withErrors(["trf_action_{$transfer->id}" => 'Only Inventory Managers can approve transfers.']);
         }
 
         $result = $this->executeApproval($transfer);
@@ -221,7 +222,7 @@ class StockTransferController extends Controller
 
         $transfer->update([
             'status' => 'approved',
-            'approved_by' => session('employee_id'),
+            'approved_by' => auth()->id(),
             'approved_at' => $now,
         ]);
 
@@ -230,14 +231,20 @@ class StockTransferController extends Controller
 
     public function reject(StockTransfer $transfer)
     {
+        if ($transfer->status !== 'pending') {
+            return back()->withErrors(["trf_action_{$transfer->id}" => 'This transfer has already been processed.']);
+        }
+
+        if (! $this->isInventoryManager()) {
+            return back()->withErrors(["trf_action_{$transfer->id}" => 'Only Inventory Managers can reject transfers.']);
+        }
+
         $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
 
         if (! $transfer) {
             $result = 'This transfer no longer exists.';
         } elseif ($transfer->status !== 'pending') {
             $result = 'This transfer has already been processed.';
-        } elseif ($transfer->requested_by === auth()->id()) {
-            $result = 'You cannot reject your own transfer request.';
         } else {
             $transfer->update(['status' => 'rejected']);
             $result = true;
@@ -258,7 +265,7 @@ class StockTransferController extends Controller
             $result = 'This transfer no longer exists.';
         } elseif ($transfer->status !== 'pending') {
             $result = 'Only pending transfers can be cancelled.';
-        } elseif ($transfer->requested_by !== auth()->id()) {
+        } elseif (! $this->canCancelRequest((int) $transfer->requested_by)) {
             $result = 'You can only cancel your own transfer requests.';
         } else {
             $transfer->update(['status' => 'cancelled']);

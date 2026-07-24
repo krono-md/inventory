@@ -9,14 +9,15 @@ use Modules\Inventory\Models\StockAdjustment;
 use Modules\Inventory\Models\StockLevel;
 use Modules\Inventory\Models\StockMovement;
 use Modules\Inventory\Models\Warehouse;
+use Modules\Inventory\Http\Controllers\Concerns\HasInventoryPermissions;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Services\ErpIntegrationService;
 
 class StockAdjustmentController extends Controller
 {
+    use HasInventoryPermissions;
     public function index(Request $request)
     {
         $query = StockAdjustment::with(['item', 'warehouse', 'requester', 'approver']);
@@ -122,18 +123,22 @@ class StockAdjustmentController extends Controller
             return back()->withErrors(["adj_action_{$adjustment->id}" => 'This adjustment has already been processed.']);
         }
 
-        if ($adjustment->requested_by === auth()->id()) {
-            return back()->withErrors(["adj_action_{$adjustment->id}" => 'You cannot approve your own adjustment request.']);
+        if (! $this->isInventoryManager()) {
+            return back()->withErrors(["adj_action_{$adjustment->id}" => 'Only Inventory Managers can approve adjustments.']);
         }
 
         $result = $this->executeApproval($adjustment);
 
         if ($result === true) {
-            app(ErpIntegrationService::class)->inventoryAvailabilityChanged(
-                (int) session('employee_client_id'),
-                (int) $adjustment->item_id,
-                'inventory.adjustment_approved'
-            );
+            try {
+                app(ErpIntegrationService::class)->inventoryAvailabilityChanged(
+                    (int) session('employee_client_id'),
+                    (int) $adjustment->item_id,
+                    'inventory.adjustment_approved'
+                );
+            } catch (\Throwable $e) {
+                // Ecommerce/BI credentials may be unconfigured — non-blocking
+            }
             return back()->with('success', 'Adjustment approved and stock updated.');
         }
 
@@ -187,7 +192,7 @@ class StockAdjustmentController extends Controller
 
         $adjustment->update([
             'status' => 'approved',
-            'approved_by' => session('employee_id'),
+            'approved_by' => auth()->id(),
             'approved_at' => now(),
         ]);
 
@@ -196,7 +201,7 @@ class StockAdjustmentController extends Controller
             'item_id' => $adjustment->item_id,
             'warehouse_id' => $adjustment->warehouse_id,
             'quantity' => $adjustment->type === 'decrease' ? -$adjustment->quantity : $adjustment->quantity,
-            'reference' => 'ADJ-' . str_pad($adjustment->id, 6, '0', STR_PAD_LEFT),
+            'reference' => 'ADJ-' . now()->format('Y') . '-' . str_pad($adjustment->id, 4, '0', STR_PAD_LEFT),
             'notes' => "Adjustment #{$adjustment->id} approved: {$adjustment->type} ({$adjustment->reason})",
             'performed_by' => session('employee_id'),
             'created_at' => now(),
@@ -207,14 +212,20 @@ class StockAdjustmentController extends Controller
 
     public function reject(StockAdjustment $adjustment)
     {
+        if ($adjustment->status !== 'pending') {
+            return back()->withErrors(["adj_action_{$adjustment->id}" => 'This adjustment has already been processed.']);
+        }
+
+        if (! $this->isInventoryManager()) {
+            return back()->withErrors(["adj_action_{$adjustment->id}" => 'Only Inventory Managers can reject adjustments.']);
+        }
+
         $adjustment = StockAdjustment::lockForUpdate()->find($adjustment->id);
 
         if (! $adjustment) {
             $result = 'This adjustment no longer exists.';
         } elseif ($adjustment->status !== 'pending') {
             $result = 'This adjustment has already been processed.';
-        } elseif ($adjustment->requested_by === auth()->id()) {
-            $result = 'You cannot reject your own adjustment request.';
         } else {
             $adjustment->update(['status' => 'rejected']);
             $result = true;
@@ -235,7 +246,7 @@ class StockAdjustmentController extends Controller
             $result = 'This adjustment no longer exists.';
         } elseif ($adjustment->status !== 'pending') {
             $result = 'Only pending adjustments can be cancelled.';
-        } elseif ($adjustment->requested_by !== auth()->id()) {
+        } elseif (! $this->canCancelRequest((int) $adjustment->requested_by)) {
             $result = 'You can only cancel your own adjustment requests.';
         } else {
             $adjustment->update(['status' => 'cancelled']);

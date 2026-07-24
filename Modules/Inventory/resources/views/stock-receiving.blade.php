@@ -10,8 +10,6 @@
     .status-approved { background: #dcfce7; color: #166534; }
     .status-rejected { background: #fee2e2; color: #991b1b; }
 
-    .tab-btn { transition: all 0.15s ease; }
-
     .shipment-row { cursor: pointer; transition: background 0.15s; }
     .shipment-row:hover { background: #f1f5f9; }
 
@@ -27,25 +25,17 @@
     .items-mini-table td { padding:6px 10px; color:#334155; border-bottom:1px solid #eef2f7; }
     .items-mini-table tr:last-child td { border-bottom:none; }
 
-    #confirmModal, #rejectModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    #confirmModal.open, #rejectModal.open { opacity: 1; pointer-events: auto; }
-
     .modal-items-list { margin: 0; padding: 0; list-style: none; font-size: 13px; }
-    .modal-items-list li { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+    .modal-items-list li { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
     .modal-items-list li:last-child { border-bottom: none; }
-    .modal-item-name { color: #1e293b; font-weight: 500; }
-    .modal-item-meta { color: #64748b; font-size: 12px; }
-    .modal-item-qty { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; color: #0b1e3d; }
+    .modal-item-name { color: #fff; font-weight: 500; }
+    .modal-item-meta { color: rgba(255,255,255,0.45); font-size: 12px; }
+    .modal-item-qty { background: rgba(27,111,200,0.20); padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 12px; color: #90c8ff; }
 </style>
 @endpush
 
 @section('content')
 <div class="inv-page">
-    @if(session('success'))
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(34,197,94,0.12);color:#16a34a;border-radius:10px;font-weight:500;font-size:14px;">
-            {{ session('success') }}
-        </div>
-    @endif
 
     <!-- KPI tiles -->
     <div class="kpi-row cols-3">
@@ -81,9 +71,9 @@
     <!-- Data panel -->
     <div class="data-panel">
         <div class="data-toolbar" style="border-bottom:1px solid #eef2f7;">
-            <div style="display:flex;gap:4px;background:#e2e8f0;border-radius:8px;padding:3px;flex-shrink:0;">
-                <button id="tabPending" class="tab-btn" onclick="switchTab('pending')" style="padding:6px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;background:#0b1e3d;color:#fff;">Pending</button>
-                <button id="tabHistory" class="tab-btn" onclick="switchTab('history')" style="padding:6px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;background:transparent;color:#64748b;">History</button>
+            <div class="inv-tabs" style="flex-shrink:0;" role="tablist" aria-label="Receiving view">
+                <button type="button" id="tabPending" class="inv-tab active" role="tab" aria-selected="true" onclick="switchTab('pending')">Pending</button>
+                <button type="button" id="tabHistory" class="inv-tab" role="tab" aria-selected="false" onclick="switchTab('history')">History</button>
             </div>
             <div id="pendingFilters" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
                 <form method="GET" action="{{ route('inventory.stock-receiving') }}" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
@@ -142,8 +132,8 @@
                                     <p style="color:#ef4444;font-size:11px;margin:0 0 6px 0;">{{ $message }}</p>
                                 @enderror
                                 @if(!$isProcessed)
-                                    <button onclick="openConfirmModal({{ $delivery->id }}, '{{ $delivery->shipment_number }}', '{{ $delivery->supplier_name }}', '{{ $delivery->destination_warehouse_name }}', {{ $delivery->qty }})" style="background:#166534;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;margin-right:4px;">Approve</button>
-                                    <button onclick="openRejectModal({{ $delivery->id }})" style="background:#991b1b;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">Reject</button>
+                                    <button type="button" class="inv-btn inv-btn-success inv-btn-xs" onclick="openConfirmModal({{ $delivery->id }}, '{{ $delivery->shipment_number }}', '{{ $delivery->supplier_name }}', '{{ $delivery->destination_warehouse_name }}', {{ $delivery->qty }})">Approve</button>
+                                    <button type="button" class="inv-btn inv-btn-danger inv-btn-xs" onclick="openRejectModal({{ $delivery->id }})">Reject</button>
                                 @else
                                     <span style="color:#94a3b8;font-size:12px;">Processed</span>
                                 @endif
@@ -242,67 +232,77 @@
             const pendingFilters = document.getElementById('pendingFilters');
             const pendingPagination = document.getElementById('pendingPagination');
 
-            if (tab === 'pending') {
-                tabPending.style.background = '#0b1e3d'; tabPending.style.color = '#fff';
-                tabHistory.style.background = 'transparent'; tabHistory.style.color = '#64748b';
-                tbodyPending.style.display = ''; tbodyHistory.style.display = 'none';
-                pendingFilters.style.display = ''; pendingPagination.style.display = '';
-            } else {
-                tabHistory.style.background = '#0b1e3d'; tabHistory.style.color = '#fff';
-                tabPending.style.background = 'transparent'; tabPending.style.color = '#64748b';
-                tbodyHistory.style.display = ''; tbodyPending.style.display = 'none';
-                pendingFilters.style.display = 'none'; pendingPagination.style.display = 'none';
-            }
+            const showPending = tab === 'pending';
+
+            tabPending.classList.toggle('active', showPending);
+            tabHistory.classList.toggle('active', !showPending);
+            tabPending.setAttribute('aria-selected', showPending ? 'true' : 'false');
+            tabHistory.setAttribute('aria-selected', showPending ? 'false' : 'true');
+
+            tbodyPending.style.display = showPending ? '' : 'none';
+            tbodyHistory.style.display = showPending ? 'none' : '';
+            pendingFilters.style.display = showPending ? '' : 'none';
+            pendingPagination.style.display = showPending ? '' : 'none';
         }
     </script>
 
     <!-- Confirm Modal -->
-    <div id="confirmModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:center;justify-content:center;">
-        <div class="nexora-modal" style="max-width:520px;">
+    <div id="confirmModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmReceivingTitle">
+        <div class="nexora-modal nexora-modal-md">
             <div class="nexora-modal-logo"></div>
             <div class="nexora-modal-header">
-                <h2 class="nexora-modal-title">Approve Receiving</h2>
-                <button type="button" onclick="closeConfirmModal()" class="nexora-modal-close">&times;</button>
+                <div class="nexora-modal-heading">
+                    <span class="nexora-modal-icon nexora-modal-icon-green">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    </span>
+                    <h2 id="confirmReceivingTitle" class="nexora-modal-title">Approve Receiving</h2>
+                </div>
+                <button type="button" onclick="closeConfirmModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
             </div>
             <form id="confirmForm" method="POST" action="">
                 @csrf
-                <div style="padding:6px 20px 16px 20px;font-size:13px;color:#475569;line-height:1.7;">
-                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #eef2f7;">
-                        <div><strong style="color:#1e293b;">Shipment:</strong><br><span id="confirmShipment" style="font-size:14px;"></span></div>
-                        <div><strong style="color:#1e293b;">Supplier:</strong><br><span id="confirmSupplier"></span></div>
-                        <div><strong style="color:#1e293b;">Warehouse:</strong><br><span id="confirmWarehouse"></span></div>
+                <div class="nexora-modal-text" style="padding:2px 0 4px;">
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.10);">
+                        <div><strong style="color:#fff;">Shipment:</strong><br><span id="confirmShipment" style="font-size:14px;"></span></div>
+                        <div><strong style="color:#fff;">Supplier:</strong><br><span id="confirmSupplier"></span></div>
+                        <div><strong style="color:#fff;">Warehouse:</strong><br><span id="confirmWarehouse"></span></div>
                     </div>
-                    <div style="margin-bottom:6px;"><strong style="color:#1e293b;font-size:13px;">Items to receive:</strong></div>
+                    <div style="margin-bottom:6px;"><strong style="color:#fff;font-size:13px;">Items to receive:</strong></div>
                     <ul class="modal-items-list" id="confirmItemsList"></ul>
                 </div>
                 <div class="nexora-modal-actions">
                     <button type="button" onclick="closeConfirmModal()" class="nexora-modal-btn-secondary">Cancel</button>
-                    <button type="submit" class="nexora-modal-btn-primary" style="background:#166534;color:#fff;border-color:#166534;">Confirm & Receive</button>
+                    <button type="submit" class="nexora-modal-btn-primary nexora-modal-btn-success">Confirm &amp; Receive</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Reject Modal -->
-    <div id="rejectModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:20;align-items:center;justify-content:center;">
-        <div class="nexora-modal" style="max-width:480px;">
+    <div id="rejectModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rejectDeliveryTitle">
+        <div class="nexora-modal nexora-modal-sm">
             <div class="nexora-modal-logo"></div>
             <div class="nexora-modal-header">
-                <h2 class="nexora-modal-title">Reject Delivery</h2>
-                <button type="button" onclick="closeRejectModal()" class="nexora-modal-close">&times;</button>
+                <div class="nexora-modal-heading">
+                    <span class="nexora-modal-icon nexora-modal-icon-red">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                    </span>
+                    <h2 id="rejectDeliveryTitle" class="nexora-modal-title">Reject Delivery</h2>
+                </div>
+                <button type="button" onclick="closeRejectModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
             </div>
             <form id="rejectForm" method="POST" action="">
                 @csrf
-                <div class="nexora-modal-form" style="grid-template-columns:1fr;">
-                    <div>
+                <div class="nexora-modal-form">
+                    <div class="nexora-modal-form-full">
                         <label class="nexora-modal-label">Reason <span style="color:#ef4444;">*</span></label>
-                        <textarea name="reject_reason" required rows="4" class="nexora-modal-input" style="resize:vertical;"></textarea>
+                        <textarea name="reject_reason" required rows="4" class="nexora-modal-textarea"></textarea>
                         @error('reject_reason')<p class="nexora-modal-error">{{ $message }}</p>@enderror
                     </div>
                 </div>
                 <div class="nexora-modal-actions">
                     <button type="button" onclick="closeRejectModal()" class="nexora-modal-btn-secondary">Cancel</button>
-                    <button type="submit" class="nexora-modal-btn-primary" style="background:#dc2626;color:#fff;border-color:#dc2626;">Reject</button>
+                    <button type="submit" class="nexora-modal-btn-primary nexora-modal-btn-danger">Reject</button>
                 </div>
             </form>
         </div>

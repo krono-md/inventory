@@ -7,50 +7,31 @@
     .capacity-bar { height: 10px; border-radius: 9999px; background: linear-gradient(90deg, #ef4444 0%, #f0a93e 40%, #22c55e 70%, #22c55e 100%); }
     .capacity-track { height: 10px; border-radius: 9999px; background: #e2e8f0; overflow: hidden; }
 
-    .view-btn { background: transparent; color: #94a3b8; border: 1px solid #1b3a6b; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.15s ease, color 0.15s ease; }
-    .view-btn.active { background: #1b3a6b; color: #fff; }
-
     /* Warehouse card shell — cohesive unit with subtle depth and hover lift */
     .warehouse-card { border-radius: 16px; overflow: hidden; border: 1px solid rgba(15, 35, 70, 0.08); box-shadow: 0 1px 2px rgba(11,30,61,0.05), 0 12px 28px -18px rgba(11, 30, 61, 0.55); transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease; }
     .warehouse-card:hover { transform: translateY(-3px); box-shadow: 0 2px 6px rgba(11,30,61,0.08), 0 18px 36px -18px rgba(11, 30, 61, 0.6); }
-
-    /* Modal transition */
-    #addWarehouseModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    #addWarehouseModal.open { opacity: 1; pointer-events: auto; }
-    #editWarehouseModal { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-    #editWarehouseModal.open { opacity: 1; pointer-events: auto; }
 </style>
 @endpush
 
 @section('content')
-    @if(session('success'))
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(34,197,94,0.15);color:#22c55e;border-radius:10px;font-weight:600;">
-            {{ session('success') }}
-        </div>
-    @endif
-    @if(session('error'))
-        <div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.15);color:#ef4444;border-radius:10px;font-weight:600;">
-            {{ session('error') }}
-        </div>
-    @endif
 
     <!-- Toolbar -->
     <div class="responsive-flex" style="margin-bottom:16px;">
         <!-- Grid / List Toggle -->
-        <div style="display:flex;align-items:center;gap:6px;">
-            <button id="gridViewBtn" class="view-btn active" title="Grid view" aria-label="Grid view">
+        <div class="inv-segment" role="group" aria-label="Layout">
+            <button id="gridViewBtn" class="active" title="Grid view" aria-label="Grid view">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                 </svg>
             </button>
-            <button id="listViewBtn" class="view-btn" title="List view" aria-label="List view">
+            <button id="listViewBtn" title="List view" aria-label="List view">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
         </div>
 
-        <button onclick="openModal()" style="background:#1b6fc8;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;">
+        <button type="button" onclick="openModal()" class="inv-btn inv-btn-primary">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Add new
         </button>
@@ -104,15 +85,15 @@
                         <div class="capacity-bar" style="width:{{ data_get($warehouse, 'capacity_percentage') }}%;"></div>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
-                        <div style="display:flex;gap:6px;">
-                            <button onclick="openEditModal({{ $warehouse->id }}, '{{ addslashes($warehouse->name) }}', {{ $warehouse->capacity_units }}, '{{ addslashes($warehouse->address ?? '') }}', '{{ $warehouse->status }}')" style="background:transparent;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;" title="Edit">
-                                <svg width="14" height="14" fill="none" stroke="#64748b" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <div class="inv-actions">
+                            <button type="button" class="inv-btn inv-btn-outline inv-btn-icon inv-btn-sm" title="Edit" aria-label="Edit warehouse" onclick="openEditModal({{ $warehouse->id }}, '{{ addslashes($warehouse->name) }}', {{ $warehouse->capacity_units }}, '{{ addslashes($warehouse->address ?? '') }}', '{{ $warehouse->status }}')">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </button>
                             <form method="POST" action="{{ route('inventory.warehouse.destroy', $warehouse) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to deactivate this warehouse?')">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" style="background:transparent;border:1px solid #fee2e2;border-radius:6px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;" title="Deactivate">
-                                    <svg width="14" height="14" fill="none" stroke="#ef4444" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                <button type="submit" class="inv-btn inv-btn-outline-danger inv-btn-icon inv-btn-sm" title="Deactivate" aria-label="Deactivate warehouse">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
                             </form>
                         </div>
@@ -127,12 +108,17 @@
     </div>
 
     <!-- Add Warehouse Modal -->
-    <div id="addWarehouseModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:20;align-items:center;justify-content:center;">
+    <div id="addWarehouseModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="addWarehouseTitle">
         <div class="nexora-modal">
             <div class="nexora-modal-logo"></div>
             <div class="nexora-modal-header">
-                <h2 class="nexora-modal-title">Add New Warehouse</h2>
-                <button type="button" onclick="closeModal()" class="nexora-modal-close">&times;</button>
+                <div class="nexora-modal-heading">
+                    <span class="nexora-modal-icon nexora-modal-icon-blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M4 21V8l8-5 8 5v13M9 21v-6h6v6"/></svg>
+                    </span>
+                    <h2 id="addWarehouseTitle" class="nexora-modal-title">Add New Warehouse</h2>
+                </div>
+                <button type="button" onclick="closeModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
             </div>
 
             <form id="addWarehouseForm" method="POST" action="{{ route('inventory.warehouse.store') }}" novalidate>
@@ -180,12 +166,17 @@
         </div>
     </div>
     <!-- Edit Warehouse Modal -->
-    <div id="editWarehouseModal" class="nexora-modal-overlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:20;align-items:center;justify-content:center;">
+    <div id="editWarehouseModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editWarehouseTitle">
         <div class="nexora-modal">
             <div class="nexora-modal-logo"></div>
             <div class="nexora-modal-header">
-                <h2 class="nexora-modal-title">Edit Warehouse</h2>
-                <button type="button" onclick="closeEditModal()" class="nexora-modal-close">&times;</button>
+                <div class="nexora-modal-heading">
+                    <span class="nexora-modal-icon nexora-modal-icon-blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </span>
+                    <h2 id="editWarehouseTitle" class="nexora-modal-title">Edit Warehouse</h2>
+                </div>
+                <button type="button" onclick="closeEditModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
             </div>
 
             <form id="editWarehouseForm" method="POST" novalidate>
