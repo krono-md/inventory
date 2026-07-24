@@ -208,6 +208,9 @@ class ItemCatalogController extends Controller
         StockTransfer::where('item_id', $item->id)->delete();
         OrderReservation::where('item_id', $item->id)->delete();
         StockLevel::where('item_id', $item->id)->delete();
+        DB::connection('inventory')->table('requisitions')
+            ->where('notes', 'LIKE', '%[item_id:' . $item->id . ']%')
+            ->delete();
 
         $item->delete();
 
