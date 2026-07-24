@@ -4,11 +4,11 @@
 
 @push('styles')
 <style>
-    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-    .status-pending { background: #fef9c3; color: #854d0e; }
-    .status-approved { background: #dcfce7; color: #166534; }
-    .status-rejected { background: #fee2e2; color: #991b1b; }
-    .status-cancelled { background: #e2e8f0; color: #475569; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; border:1px solid transparent; }
+    .status-pending { background: #F0FFF5; color: #D97706; border-color: rgba(217,119,6,0.5); }
+    .status-approved { background: #F0FFF5; color: #0CAE57; border-color: rgba(12,174,87,0.5); }
+    .status-rejected { background: #F0FFF5; color: #DC2626; border-color: rgba(220,38,38,0.5); }
+    .status-cancelled { background: #F0FFF5; color: #64748B; border-color: rgba(100,116,139,0.5); }
 
 </style>
 @endpush

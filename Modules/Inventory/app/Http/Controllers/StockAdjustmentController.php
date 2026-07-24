@@ -220,43 +220,41 @@ class StockAdjustmentController extends Controller
             return back()->withErrors(["adj_action_{$adjustment->id}" => 'Only Inventory Managers can reject adjustments.']);
         }
 
-        $adjustment = StockAdjustment::lockForUpdate()->find($adjustment->id);
+        $adjustmentId = $adjustment->id;
+        $adjustment = StockAdjustment::lockForUpdate()->find($adjustmentId);
 
         if (! $adjustment) {
-            $result = 'This adjustment no longer exists.';
-        } elseif ($adjustment->status !== 'pending') {
-            $result = 'This adjustment has already been processed.';
-        } else {
-            $adjustment->update(['status' => 'rejected']);
-            $result = true;
+            return back()->withErrors(["adj_action_{$adjustmentId}" => 'This adjustment no longer exists.']);
         }
 
-        if ($result === true) {
-            return back()->with('success', 'Adjustment rejected.');
+        if ($adjustment->status !== 'pending') {
+            return back()->withErrors(["adj_action_{$adjustment->id}" => 'This adjustment has already been processed.']);
         }
 
-        return back()->withErrors(["adj_action_{$adjustment->id}" => $result]);
+        $adjustment->update(['status' => 'rejected']);
+
+        return back()->with('success', 'Adjustment rejected.');
     }
 
     public function cancel(StockAdjustment $adjustment)
     {
-        $adjustment = StockAdjustment::lockForUpdate()->find($adjustment->id);
+        $adjustmentId = $adjustment->id;
+        $adjustment = StockAdjustment::lockForUpdate()->find($adjustmentId);
 
         if (! $adjustment) {
-            $result = 'This adjustment no longer exists.';
-        } elseif ($adjustment->status !== 'pending') {
-            $result = 'Only pending adjustments can be cancelled.';
-        } elseif (! $this->canCancelRequest((int) $adjustment->requested_by)) {
-            $result = 'You can only cancel your own adjustment requests.';
-        } else {
-            $adjustment->update(['status' => 'cancelled']);
-            $result = true;
+            return back()->withErrors(["adj_action_{$adjustmentId}" => 'This adjustment no longer exists.']);
         }
 
-        if ($result === true) {
-            return back()->with('success', 'Adjustment request cancelled.');
+        if ($adjustment->status !== 'pending') {
+            return back()->withErrors(["adj_action_{$adjustment->id}" => 'Only pending adjustments can be cancelled.']);
         }
 
-        return back()->withErrors(["adj_action_{$adjustment->id}" => $result]);
+        if (! $this->canCancelRequest((int) $adjustment->requested_by)) {
+            return back()->withErrors(["adj_action_{$adjustment->id}" => 'You can only cancel your own adjustment requests.']);
+        }
+
+        $adjustment->update(['status' => 'cancelled']);
+
+        return back()->with('success', 'Adjustment request cancelled.');
     }
 }

@@ -49,6 +49,7 @@ Route::middleware('inventory.access')->name('inventory.')->group(function (): vo
     Route::post('/warehouse', [WarehouseController::class, 'store'])->name('warehouse.store');
     Route::patch('/warehouse/{warehouse}', [WarehouseController::class, 'update'])->name('warehouse.update');
     Route::delete('/warehouse/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy');
+    Route::patch('/warehouse/{warehouse}/toggle', [WarehouseController::class, 'toggle'])->name('warehouse.toggle');
     Route::get('/stock-receiving', [StockReceivingController::class, 'index'])->name('stock-receiving');
     Route::post('/stock-receiving/{delivery}/approve', [StockReceivingController::class, 'approve'])->name('stock-receiving.approve');
     Route::post('/stock-receiving/{delivery}/reject', [StockReceivingController::class, 'reject'])->name('stock-receiving.reject');

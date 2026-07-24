@@ -4,14 +4,20 @@
 
 @push('styles')
 <style>
-    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-    .status-pending { background: #fef9c3; color: #854d0e; }
-    .status-intransit { background: #dbeafe; color: #1e40af; }
-    .status-approved { background: #dcfce7; color: #166534; }
-    .status-rejected { background: #fee2e2; color: #991b1b; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; border:1px solid transparent; }
+    .status-pending { background: #F0FFF5; color: #D97706; border-color: rgba(217,119,6,0.5); }
+    .status-intransit { background: #F0FFF5; color: #3B82F6; border-color: rgba(59,130,246,0.5); }
+    .status-approved { background: #F0FFF5; color: #0CAE57; border-color: rgba(12,174,87,0.5); }
+    .status-rejected { background: #F0FFF5; color: #DC2626; border-color: rgba(220,38,38,0.5); }
 
     .shipment-row { cursor: pointer; transition: background 0.15s; }
     .shipment-row:hover { background: #f1f5f9; }
+
+    .modal-items-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; }
+    .modal-items-list li { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f8fafc; border-radius:8px; font-size:13px; }
+    .modal-item-name { font-weight:600; color:#0f172a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .modal-item-meta { color:#94a3b8; font-size:11px; flex-shrink:0; }
+    .modal-item-qty { background:#e2e8f0; color:#475569; font-weight:700; font-size:12px; padding:2px 10px; border-radius:9999px; flex-shrink:0; }
 
     .expand-arrow { transition: transform 0.2s ease; display: inline-flex; align-items: center; color: #94a3b8; }
     .expand-arrow.open { transform: rotate(90deg); color: #0b1e3d; }
@@ -172,7 +178,7 @@
                             <td class="col-r cell-strong">{{ $entry->quantity }}</td>
                             <td>{{ $entry->warehouse?->name ?? '—' }}</td>
                             <td>
-                                <span class="status-badge status-{{ $entry->status }}" style="{{ $entry->status === 'approved' ? 'background:#dcfce7;color:#166534;' : 'background:#fee2e2;color:#991b1b;' }}">{{ ucfirst($entry->status) }}</span>
+                                <span class="status-badge status-{{ $entry->status }}">{{ ucfirst($entry->status) }}</span>
                             </td>
                             <td class="cell-muted" style="font-size:12px;">
                                 <div>by {{ $entry->processor?->name ?? '—' }}</div>
@@ -261,18 +267,18 @@
             </div>
             <form id="confirmForm" method="POST" action="">
                 @csrf
-                <div class="nexora-modal-text" style="padding:2px 0 4px;">
-                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.10);">
-                        <div><strong style="color:#fff;">Shipment:</strong><br><span id="confirmShipment" style="font-size:14px;"></span></div>
-                        <div><strong style="color:#fff;">Supplier:</strong><br><span id="confirmSupplier"></span></div>
-                        <div><strong style="color:#fff;">Warehouse:</strong><br><span id="confirmWarehouse"></span></div>
+                <div style="padding:16px 24px;">
+                    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e2e8f0;">
+                        <div><strong style="color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Shipment</strong><br><span id="confirmShipment" style="font-size:14px;font-weight:600;color:#0f172a;"></span></div>
+                        <div><strong style="color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Supplier</strong><br><span id="confirmSupplier" style="font-size:14px;color:#0f172a;"></span></div>
+                        <div><strong style="color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Warehouse</strong><br><span id="confirmWarehouse" style="font-size:14px;color:#0f172a;"></span></div>
                     </div>
-                    <div style="margin-bottom:6px;"><strong style="color:#fff;font-size:13px;">Items to receive:</strong></div>
+                    <div style="margin-bottom:8px;"><strong style="color:#475569;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Items to receive</strong></div>
                     <ul class="modal-items-list" id="confirmItemsList"></ul>
                 </div>
                 <div class="nexora-modal-actions">
                     <button type="button" onclick="closeConfirmModal()" class="nexora-modal-btn-secondary">Cancel</button>
-                    <button type="submit" class="nexora-modal-btn-primary nexora-modal-btn-success">Confirm &amp; Receive</button>
+                    <button type="submit" class="nexora-modal-btn-primary" style="background:#0CAE57;">Confirm &amp; Receive</button>
                 </div>
             </form>
         </div>
@@ -324,7 +330,7 @@
                 const items = deliveryItems[poId] || [];
                 itemsList.innerHTML = items.length
                     ? items.map(i => `<li><span class="modal-item-name">${i.name}</span> <span class="modal-item-meta">${i.sku}</span> <span class="modal-item-qty">${i.qty}</span></li>`).join('')
-                    : '<li style="color:#94a3b8;justify-content:center;padding:12px 0;">No items</li>';
+                    : '<li style="justify-content:center;padding:12px 0;color:#94a3b8;">No items</li>';
             }
 
             document.getElementById('confirmForm').action = '{{ url("inventory/stock-receiving") }}' + '/' + id + '/approve';

@@ -203,10 +203,10 @@
                             <td style="text-align:center;padding:12px 4px;font-size:13px;color:#132B52;">&#8369;{{ number_format($item['unit_cost'] ?? 0, 2) }}</td>
                             <td style="text-align:center;padding:12px 8px;">
                                 @php
-                                    $badgeColors = ['In Stock' => ['bg'=>'#DCFCE7','text'=>'#16A34A'], 'Low Stock' => ['bg'=>'#FEF3C7','text'=>'#D97706'], 'Out of Stock' => ['bg'=>'#FEE2E2','text'=>'#DC2626']];
-                                    $colors = $badgeColors[$item['status']] ?? ['bg'=>'#e2e8f0','text'=>'#64748b'];
+                                    $badgeColors = ['In Stock' => ['bg'=>'#F0FFF5','text'=>'#0CAE57','border'=>'rgba(12,174,87,0.5)'], 'Low Stock' => ['bg'=>'#F0FFF5','text'=>'#D97706','border'=>'rgba(217,119,6,0.5)'], 'Out of Stock' => ['bg'=>'#F0FFF5','text'=>'#DC2626','border'=>'rgba(220,38,38,0.5)']];
+                                    $bc = $badgeColors[$item['status']] ?? ['bg'=>'#e2e8f0','text'=>'#64748b','border'=>'#cbd5e1'];
                                 @endphp
-                                <span style="background:{{ $colors['bg'] }};color:{{ $colors['text'] }};font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">{{ $item['status'] }}</span>
+                                <span style="background:{{ $bc['bg'] }};color:{{ $bc['text'] }};border:1px solid {{ $bc['border'] }};font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">{{ $item['status'] }}</span>
                             </td>
                             <td style="text-align:center;padding:12px 4px;">
                                 <button type="button" class="inv-btn inv-btn-quiet-danger inv-btn-icon inv-btn-sm" title="Delete item" aria-label="Delete {{ $item['name'] }}" onclick="event.stopPropagation();openDeleteModal({{ $item['id'] }}, '{{ $item['sku'] }}', '{{ addslashes($item['name']) }}')">
@@ -241,8 +241,8 @@
                                                     </form>
                                                 </td>
                                                 <td>
-                                                    @php $slColors = ['In Stock'=>['bg'=>'#dcfce7','text'=>'#166534'],'Low Stock'=>['bg'=>'#fef9c3','text'=>'#854d0e'],'Out of Stock'=>['bg'=>'#fee2e2','text'=>'#991b1b']]; $slc = $slColors[$row['status']] ?? ['bg'=>'#e2e8f0','text'=>'#64748b']; @endphp
-                                                    <span style="background:{{ $slc['bg'] }};color:{{ $slc['text'] }};font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;">{{ $row['status'] }}</span>
+                                                    @php $slColors = ['In Stock'=>['bg'=>'#F0FFF5','text'=>'#0CAE57','border'=>'rgba(12,174,87,0.5)'],'Low Stock'=>['bg'=>'#F0FFF5','text'=>'#D97706','border'=>'rgba(217,119,6,0.5)'],'Out of Stock'=>['bg'=>'#F0FFF5','text'=>'#DC2626','border'=>'rgba(220,38,38,0.5)']]; $slc = $slColors[$row['status']] ?? ['bg'=>'#e2e8f0','text'=>'#64748b','border'=>'#cbd5e1']; @endphp
+                                                    <span style="background:{{ $slc['bg'] }};color:{{ $slc['text'] }};border:1px solid {{ $slc['border'] }};font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;">{{ $row['status'] }}</span>
                                                 </td>
                                             </tr>
                                             @empty
@@ -290,8 +290,8 @@
                             </td>
                             <td style="text-align:center;padding:12px 6px;font-size:13px;color:#5B7A9D;">{{ $pm->box_size ?? '—' }}</td>
                             <td style="text-align:center;padding:12px 6px;">
-                                @php $pmStatus = $pm->stock_qty <= 0 ? 'Out of Stock' : ($pm->stock_qty <= $pm->low_stock_threshold ? 'Low Stock' : 'In Stock'); $pmColors = ['In Stock'=>['bg'=>'#dcfce7','text'=>'#166534'],'Low Stock'=>['bg'=>'#fef9c3','text'=>'#854d0e'],'Out of Stock'=>['bg'=>'#fee2e2','text'=>'#991b1b']]; $pc = $pmColors[$pmStatus]; @endphp
-                                <span style="background:{{ $pc['bg'] }};color:{{ $pc['text'] }};font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">{{ $pmStatus }}</span>
+                                @php $pmStatus = $pm->stock_qty <= 0 ? 'Out of Stock' : ($pm->stock_qty <= $pm->low_stock_threshold ? 'Low Stock' : 'In Stock'); $pmColors = ['In Stock'=>['bg'=>'#F0FFF5','text'=>'#0CAE57','border'=>'rgba(12,174,87,0.5)'],'Low Stock'=>['bg'=>'#F0FFF5','text'=>'#D97706','border'=>'rgba(217,119,6,0.5)'],'Out of Stock'=>['bg'=>'#F0FFF5','text'=>'#DC2626','border'=>'rgba(220,38,38,0.5)']]; $pc = $pmColors[$pmStatus] ?? ['bg'=>'#e2e8f0','text'=>'#64748b','border'=>'#cbd5e1']; @endphp
+                                <span style="background:{{ $pc['bg'] }};color:{{ $pc['text'] }};border:1px solid {{ $pc['border'] }};font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">{{ $pmStatus }}</span>
                             </td>
                             <td style="text-align:center;padding:12px 6px;">
                                 <form method="POST" action="{{ route('inventory.item-catalog.packing.destroy', $pm->id) }}" onsubmit="return confirm('Delete this packing material?')" style="display:inline;">

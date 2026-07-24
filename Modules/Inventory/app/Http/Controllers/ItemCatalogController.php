@@ -24,7 +24,7 @@ class ItemCatalogController extends Controller
     public function index(Request $request)
     {
         $categories = Category::all();
-        $warehouses = Warehouse::all();
+        $warehouses = Warehouse::where('status', 'active')->get();
 
         $query = Item::with(['category', 'stockLevels.warehouse']);
 

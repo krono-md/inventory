@@ -153,7 +153,7 @@ class StockMovementController extends Controller
         }
 
         return StockTransfer::whereIn('id', $ids)
-            ->get(['id', 'from_warehouse_id', 'to_warehouse_id'])
+            ->get(['id', 'from_warehouse_id', 'to_warehouse_id', 'created_at'])
             ->keyBy(fn ($transfer) => $transfer->reference)
             ->all();
     }

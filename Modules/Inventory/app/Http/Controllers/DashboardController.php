@@ -17,7 +17,7 @@ class DashboardController extends Controller
     public function index()
     {
         $items = Item::all();
-        $warehouses = Warehouse::all();
+        $warehouses = Warehouse::where('status', 'active')->get();
         $movements = StockMovement::with(['item', 'warehouse'])->orderByDesc('created_at')->take(7)->get();
 
         $totalItems = $items->count();

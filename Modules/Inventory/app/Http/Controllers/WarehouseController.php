@@ -13,7 +13,9 @@ class WarehouseController extends Controller
     {
         $warehouses = Warehouse::withCount(['stockLevels as item_types_count' => function ($query) {
             $query->where('stock', '>', 0)->select(\Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT item_id)'));
-        }])->get();
+        }])->get()->sortBy(function ($w) {
+            return $w->status === 'active' ? 0 : 1;
+        })->values();
 
         return view('inventory::warehouse', [
             'warehouses' => $warehouses,
@@ -47,6 +49,18 @@ class WarehouseController extends Controller
         $warehouse->update($validated);
 
         return redirect()->route('inventory.warehouse')->with('success', 'Warehouse updated successfully.');
+    }
+
+    public function toggle(Warehouse $warehouse)
+    {
+        if ($warehouse->status === 'active') {
+            $warehouse->update(['status' => 'inactive', 'deactivated_at' => now()]);
+        } else {
+            $warehouse->update(['status' => 'active', 'deactivated_at' => null]);
+        }
+
+        $action = $warehouse->status === 'active' ? 'activated' : 'deactivated';
+        return redirect()->route('inventory.warehouse')->with('success', "Warehouse {$action} successfully.");
     }
 
     public function destroy(Warehouse $warehouse)

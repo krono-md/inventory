@@ -188,6 +188,10 @@ class StockTransferController extends Controller
             }
         }
 
+        if (! $destination) {
+            return 'Failed to create or find destination stock level.';
+        }
+
         $reference = $transfer->reference;
         $now = now();
 
@@ -239,44 +243,42 @@ class StockTransferController extends Controller
             return back()->withErrors(["trf_action_{$transfer->id}" => 'Only Inventory Managers can reject transfers.']);
         }
 
-        $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
+        $transferId = $transfer->id;
+        $transfer = StockTransfer::lockForUpdate()->find($transferId);
 
         if (! $transfer) {
-            $result = 'This transfer no longer exists.';
-        } elseif ($transfer->status !== 'pending') {
-            $result = 'This transfer has already been processed.';
-        } else {
-            $transfer->update(['status' => 'rejected']);
-            $result = true;
+            return back()->withErrors(["trf_action_{$transferId}" => 'This transfer no longer exists.']);
         }
 
-        if ($result === true) {
-            return back()->with('success', 'Transfer rejected.');
+        if ($transfer->status !== 'pending') {
+            return back()->withErrors(["trf_action_{$transfer->id}" => 'This transfer has already been processed.']);
         }
 
-        return back()->withErrors(["trf_action_{$transfer->id}" => $result]);
+        $transfer->update(['status' => 'rejected']);
+
+        return back()->with('success', 'Transfer rejected.');
     }
 
     public function cancel(StockTransfer $transfer)
     {
-        $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
+        $transferId = $transfer->id;
+        $transfer = StockTransfer::lockForUpdate()->find($transferId);
 
         if (! $transfer) {
-            $result = 'This transfer no longer exists.';
-        } elseif ($transfer->status !== 'pending') {
-            $result = 'Only pending transfers can be cancelled.';
-        } elseif (! $this->canCancelRequest((int) $transfer->requested_by)) {
-            $result = 'You can only cancel your own transfer requests.';
-        } else {
-            $transfer->update(['status' => 'cancelled']);
-            $result = true;
+            return back()->withErrors(["trf_action_{$transferId}" => 'This transfer no longer exists.']);
         }
 
-        if ($result === true) {
-            return back()->with('success', 'Transfer request cancelled.');
+        if ($transfer->status !== 'pending') {
+            return back()->withErrors(["trf_action_{$transfer->id}" => 'Only pending transfers can be cancelled.']);
         }
 
-        return back()->withErrors(["trf_action_{$transfer->id}" => $result]);
+        if (! $this->canCancelRequest((int) $transfer->requested_by)) {
+            return back()->withErrors(["trf_action_{$transfer->id}" => 'You can only cancel your own transfer requests.']);
+        }
+
+        $transfer->update(['status' => 'cancelled']);
+
+        return back()->with('success', 'Transfer request cancelled.');
     }
 }
 

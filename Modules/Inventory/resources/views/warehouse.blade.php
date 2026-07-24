@@ -10,6 +10,15 @@
     /* Warehouse card shell — cohesive unit with subtle depth and hover lift */
     .warehouse-card { border-radius: 16px; overflow: hidden; border: 1px solid rgba(15, 35, 70, 0.08); box-shadow: 0 1px 2px rgba(11,30,61,0.05), 0 12px 28px -18px rgba(11, 30, 61, 0.55); transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease; }
     .warehouse-card:hover { transform: translateY(-3px); box-shadow: 0 2px 6px rgba(11,30,61,0.08), 0 18px 36px -18px rgba(11, 30, 61, 0.6); }
+
+    /* Toggle switch */
+    .wh-toggle { position:relative; display:inline-block; width:44px; height:24px; cursor:pointer; }
+    .wh-toggle-input { opacity:0; width:0; height:0; }
+    .wh-toggle-slider { position:absolute; inset:0; background:#cbd5e1; border-radius:24px; transition:0.25s; }
+    .wh-toggle-slider::before { content:""; position:absolute; height:20px; width:20px; left:2px; bottom:2px; background:#fff; border-radius:50%; transition:0.25s; }
+    .wh-toggle-input:checked + .wh-toggle-slider { background:#0CAE57; }
+    .wh-toggle-input:checked + .wh-toggle-slider::before { transform:translateX(20px); }
+
 </style>
 @endpush
 
@@ -52,10 +61,10 @@
                         </div>
                         @php
                             $whActive = strtolower((string) data_get($warehouse, 'status')) === 'active';
-                            $whAccent = $whActive ? '#22c55e' : '#94a3b8';
-                            $whBg = $whActive ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.15)';
+                            $whAccent = $whActive ? '#0CAE57' : '#64748B';
+                            $whBorder = $whActive ? 'rgba(12,174,87,0.5)' : 'rgba(100,116,139,0.5)';
                         @endphp
-                        <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:{{ $whBg }};color:{{ $whAccent }};font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">
+                        <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:12px;background:#F0FFF5;color:{{ $whAccent }};border:1px solid {{ $whBorder }};font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">
                             <span style="width:6px;height:6px;border-radius:50%;background:{{ $whAccent }};display:inline-block;"></span>
                             {{ ucfirst((string) data_get($warehouse, 'status')) }}
                         </span>
@@ -84,19 +93,11 @@
                     <div class="capacity-track">
                         <div class="capacity-bar" style="width:{{ data_get($warehouse, 'capacity_percentage') }}%;"></div>
                     </div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
-                        <div class="inv-actions">
-                            <button type="button" class="inv-btn inv-btn-outline inv-btn-icon inv-btn-sm" title="Edit" aria-label="Edit warehouse" onclick="openEditModal({{ $warehouse->id }}, '{{ addslashes($warehouse->name) }}', {{ $warehouse->capacity_units }}, '{{ addslashes($warehouse->address ?? '') }}', '{{ $warehouse->status }}')">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                            </button>
-                            <form method="POST" action="{{ route('inventory.warehouse.destroy', $warehouse) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to deactivate this warehouse?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="inv-btn inv-btn-outline-danger inv-btn-icon inv-btn-sm" title="Deactivate" aria-label="Deactivate warehouse">
-                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </button>
-                            </form>
-                        </div>
+                    <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:12px;">
+                        <label class="wh-toggle" title="{{ $warehouse->status === 'active' ? 'Deactivate' : 'Activate' }} warehouse">
+                            <input type="checkbox" class="wh-toggle-input" data-id="{{ $warehouse->id }}" data-name="{{ addslashes($warehouse->name) }}" data-active="{{ $warehouse->status === 'active' ? 'true' : 'false' }}" data-url="{{ route('inventory.warehouse.toggle', $warehouse) }}" {{ $warehouse->status === 'active' ? 'checked' : '' }}>
+                            <span class="wh-toggle-slider"></span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -165,6 +166,31 @@
             </form>
         </div>
     </div>
+    <!-- Toggle Confirmation Modal -->
+    <div id="toggleModal" class="nexora-modal-overlay" role="dialog" aria-modal="true">
+        <div class="nexora-modal">
+            <div class="nexora-modal-logo"></div>
+            <div class="nexora-modal-header">
+                <div class="nexora-modal-heading">
+                    <span class="nexora-modal-icon" id="toggleModalIcon" style="background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    <h2 class="nexora-modal-title" id="toggleModalTitle">Deactivate Warehouse</h2>
+                </div>
+                <button type="button" onclick="closeToggleModal()" class="nexora-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div style="padding:8px 24px 20px;font-size:13px;color:#475569;line-height:1.5;" id="toggleModalBody"></div>
+            <div class="nexora-modal-actions">
+                <button type="button" onclick="closeToggleModal()" class="nexora-modal-btn-secondary">Cancel</button>
+                <form id="toggleForm" method="POST" style="display:inline;">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="nexora-modal-btn-primary" id="toggleConfirmBtn">Deactivate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Warehouse Modal -->
     <div id="editWarehouseModal" class="nexora-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editWarehouseTitle">
         <div class="nexora-modal">
@@ -312,6 +338,56 @@
             editModal.classList.add('open');
         }
     })();
+
+    // Toggle confirmation modal
+    const toggleModal = document.getElementById('toggleModal');
+    const toggleForm = document.getElementById('toggleForm');
+    const toggleModalTitle = document.getElementById('toggleModalTitle');
+    const toggleModalBody = document.getElementById('toggleModalBody');
+    const toggleModalIcon = document.getElementById('toggleModalIcon');
+    const toggleConfirmBtn = document.getElementById('toggleConfirmBtn');
+
+    function openToggleModal(id, name, isActive, url) {
+        toggleForm.action = url;
+        if (isActive) {
+            toggleModalTitle.textContent = 'Deactivate Warehouse';
+            toggleModalBody.innerHTML = '<div style="background:#fef2f2;border:1px solid rgba(220,38,38,0.2);border-radius:10px;padding:14px 16px;margin-bottom:6px;"><strong style="color:#DC2626;font-size:13px;display:block;margin-bottom:6px;">&#9888; This action will freeze this warehouse</strong><p style="margin:0;color:#991b1b;font-size:12px;line-height:1.5;">Are you sure you want to deactivate <strong>"' + name + '"</strong>? Once deactivated, this warehouse will become completely invisible to all departments and no stock transactions can be made to or from it until reactivated.</p></div>';
+            toggleModalIcon.style.background = 'rgba(220,38,38,0.12)';
+            toggleModalIcon.style.color = '#DC2626';
+            toggleModalIcon.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            toggleConfirmBtn.textContent = 'Deactivate';
+            toggleConfirmBtn.className = 'nexora-modal-btn-primary nexora-modal-btn-danger';
+        } else {
+            toggleModalTitle.textContent = 'Activate Warehouse';
+            toggleModalBody.innerHTML = '<div style="background:#f0fdf4;border:1px solid rgba(12,174,87,0.2);border-radius:10px;padding:14px 16px;"><strong style="color:#0CAE57;font-size:13px;display:block;margin-bottom:6px;">&#10003; Re-activate this warehouse</strong><p style="margin:0;color:#166534;font-size:12px;line-height:1.5;">Are you sure you want to activate <strong>"' + name + '"</strong>? This warehouse will become available for all inventory transactions again.</p></div>';
+            toggleModalIcon.style.background = 'rgba(12,174,87,0.12)';
+            toggleModalIcon.style.color = '#0CAE57';
+            toggleModalIcon.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            toggleConfirmBtn.textContent = 'Activate';
+            toggleConfirmBtn.className = 'nexora-modal-btn-primary nexora-modal-btn-success';
+        }
+        toggleModal.classList.add('open');
+    }
+
+    function closeToggleModal() {
+        toggleModal.classList.remove('open');
+    }
+
+    toggleModal.addEventListener('click', function(e) {
+        if (e.target === this) closeToggleModal();
+    });
+
+    // Toggle switch click -> open confirmation modal
+    document.querySelectorAll('.wh-toggle-input').forEach(function(input) {
+        input.addEventListener('click', function(e) {
+            e.preventDefault();
+            var id = this.getAttribute('data-id');
+            var name = this.getAttribute('data-name');
+            var isActive = this.getAttribute('data-active') === 'true';
+            var url = this.getAttribute('data-url');
+            openToggleModal(id, name, isActive, url);
+        });
+    });
 </script>
 @endpush
 

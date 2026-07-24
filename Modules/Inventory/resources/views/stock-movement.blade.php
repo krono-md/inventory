@@ -106,11 +106,11 @@
                                 @if ($movement->type === 'inbound')
                                     <span class="mv-badge" style="background:#F0FFF5;color:#0CAE57;border:1px solid rgba(12,174,87,0.5);">Inbound</span>
                                 @elseif ($movement->type === 'outbound')
-                                    <span class="mv-badge" style="background:#FFF5F5;color:#DC2626;border:1px solid rgba(220,38,38,0.5);">Outbound</span>
+                                    <span class="mv-badge" style="background:#F0FFF5;color:#DC2626;border:1px solid rgba(220,38,38,0.5);">Outbound</span>
                                 @elseif ($movement->type === 'adjustment')
-                                    <span class="mv-badge" style="background:#FEF3C7;color:#D97706;border:1px solid rgba(217,119,6,0.5);">Adjustment</span>
+                                    <span class="mv-badge" style="background:#F0FFF5;color:#D97706;border:1px solid rgba(217,119,6,0.5);">Adjustment</span>
                                 @else
-                                    <span class="mv-badge" style="background:#EFF6FF;color:#2563EB;border:1px solid rgba(37,99,235,0.5);">Transfer</span>
+                                    <span class="mv-badge" style="background:#F0FFF5;color:#3B82F6;border:1px solid rgba(59,130,246,0.5);">Transfer</span>
                                 @endif
                             </td>
                             <td class="cell-strong">{{ $movement->item?->name ?? 'N/A' }}</td>
