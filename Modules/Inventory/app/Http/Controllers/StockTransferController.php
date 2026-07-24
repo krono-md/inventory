@@ -128,121 +128,120 @@ class StockTransferController extends Controller
 
     private function executeApproval(StockTransfer $transfer): true|string
     {
-        return DB::connection('inventory')->transaction(function () use ($transfer) {
-            $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
+        $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
 
-            if ($transfer->status !== 'pending') {
-                return 'This transfer has already been processed.';
+        if (! $transfer) {
+            return 'This transfer no longer exists.';
+        }
+
+        if ($transfer->status !== 'pending') {
+            return 'This transfer has already been processed.';
+        }
+
+        $fromWarehouse = Warehouse::where('id', $transfer->from_warehouse_id)
+            ->whereNull('deleted_at')->where('status', 'active')->lockForUpdate()->first();
+        $toWarehouse = Warehouse::where('id', $transfer->to_warehouse_id)
+            ->whereNull('deleted_at')->where('status', 'active')->lockForUpdate()->first();
+
+        if (!$fromWarehouse) {
+            return 'Source warehouse is no longer active.';
+        }
+
+        if (!$toWarehouse) {
+            return 'Destination warehouse is no longer active.';
+        }
+
+        $source = StockLevel::where('item_id', $transfer->item_id)
+            ->where('warehouse_id', $transfer->from_warehouse_id)
+            ->lockForUpdate()
+            ->first();
+
+        $destination = StockLevel::where('item_id', $transfer->item_id)
+            ->where('warehouse_id', $transfer->to_warehouse_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$source) {
+            return 'No stock level record exists for the source warehouse.';
+        }
+
+        $available = $source->stock - $source->reserved_quantity;
+
+        if ($available < $transfer->quantity) {
+            return "Insufficient available stock in source warehouse. Only {$available} units available (stock: {$source->stock}, reserved: {$source->reserved_quantity}).";
+        }
+
+        if (!$destination) {
+            try {
+                $destination = StockLevel::create([
+                    'item_id' => $transfer->item_id,
+                    'warehouse_id' => $transfer->to_warehouse_id,
+                    'stock' => 0,
+                    'reorder_threshold' => $source->reorder_threshold,
+                ]);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                $destination = StockLevel::where('item_id', $transfer->item_id)
+                    ->where('warehouse_id', $transfer->to_warehouse_id)
+                    ->lockForUpdate()
+                    ->first();
             }
+        }
 
-            $fromWarehouse = Warehouse::where('id', $transfer->from_warehouse_id)
-                ->whereNull('deleted_at')->where('status', 'active')->lockForUpdate()->first();
-            $toWarehouse = Warehouse::where('id', $transfer->to_warehouse_id)
-                ->whereNull('deleted_at')->where('status', 'active')->lockForUpdate()->first();
+        $reference = $transfer->reference;
+        $now = now();
 
-            if (!$fromWarehouse) {
-                return 'Source warehouse is no longer active.';
-            }
+        $source->decrement('stock', $transfer->quantity);
 
-            if (!$toWarehouse) {
-                return 'Destination warehouse is no longer active.';
-            }
+        $destination->increment('stock', $transfer->quantity);
 
-            $source = StockLevel::where('item_id', $transfer->item_id)
-                ->where('warehouse_id', $transfer->from_warehouse_id)
-                ->lockForUpdate()
-                ->first();
+        Warehouse::whereIn('id', [$transfer->from_warehouse_id, $transfer->to_warehouse_id])
+            ->update(['last_activity_at' => $now]);
 
-            $destination = StockLevel::where('item_id', $transfer->item_id)
-                ->where('warehouse_id', $transfer->to_warehouse_id)
-                ->lockForUpdate()
-                ->first();
+        StockMovement::create([
+            'type' => 'transfer',
+            'item_id' => $transfer->item_id,
+            'warehouse_id' => $transfer->from_warehouse_id,
+            'quantity' => $transfer->quantity,
+            'reference' => $reference,
+            'notes' => "Transfer #{$transfer->id} from {$transfer->fromWarehouse->name} to {$transfer->toWarehouse->name}",
+            'performed_by' => session('employee_id'),
+            'created_at' => $now,
+        ]);
 
-            if (!$source) {
-                return 'No stock level record exists for the source warehouse.';
-            }
+        StockMovement::create([
+            'type' => 'transfer',
+            'item_id' => $transfer->item_id,
+            'warehouse_id' => $transfer->to_warehouse_id,
+            'quantity' => $transfer->quantity,
+            'reference' => $reference,
+            'notes' => "Transfer #{$transfer->id} from {$transfer->fromWarehouse->name} to {$transfer->toWarehouse->name}",
+            'performed_by' => session('employee_id'),
+            'created_at' => $now,
+        ]);
 
-            $available = $source->stock - $source->reserved_quantity;
+        $transfer->update([
+            'status' => 'approved',
+            'approved_by' => session('employee_id'),
+            'approved_at' => $now,
+        ]);
 
-            if ($available < $transfer->quantity) {
-                return "Insufficient available stock in source warehouse. Only {$available} units available (stock: {$source->stock}, reserved: {$source->reserved_quantity}).";
-            }
-
-            if (!$destination) {
-                try {
-                    $destination = StockLevel::create([
-                        'item_id' => $transfer->item_id,
-                        'warehouse_id' => $transfer->to_warehouse_id,
-                        'stock' => 0,
-                        'reorder_threshold' => $source->reorder_threshold,
-                    ]);
-                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
-                    $destination = StockLevel::where('item_id', $transfer->item_id)
-                        ->where('warehouse_id', $transfer->to_warehouse_id)
-                        ->lockForUpdate()
-                        ->first();
-                }
-            }
-
-            $reference = $transfer->reference;
-            $now = now();
-
-            $source->decrement('stock', $transfer->quantity);
-
-            $destination->increment('stock', $transfer->quantity);
-
-            Warehouse::whereIn('id', [$transfer->from_warehouse_id, $transfer->to_warehouse_id])
-                ->update(['last_activity_at' => $now]);
-
-            StockMovement::create([
-                'type' => 'transfer',
-                'item_id' => $transfer->item_id,
-                'warehouse_id' => $transfer->from_warehouse_id,
-                'quantity' => $transfer->quantity,
-                'reference' => $reference,
-                'notes' => "Transfer #{$transfer->id} from {$transfer->fromWarehouse->name} to {$transfer->toWarehouse->name}",
-                'performed_by' => session('employee_id'),
-                'created_at' => $now,
-            ]);
-
-            StockMovement::create([
-                'type' => 'transfer',
-                'item_id' => $transfer->item_id,
-                'warehouse_id' => $transfer->to_warehouse_id,
-                'quantity' => $transfer->quantity,
-                'reference' => $reference,
-                'notes' => "Transfer #{$transfer->id} from {$transfer->fromWarehouse->name} to {$transfer->toWarehouse->name}",
-                'performed_by' => session('employee_id'),
-                'created_at' => $now,
-            ]);
-
-            $transfer->update([
-                'status' => 'approved',
-                'approved_by' => session('employee_id'),
-                'approved_at' => $now,
-            ]);
-
-            return true;
-        });
+        return true;
     }
 
     public function reject(StockTransfer $transfer)
     {
-        $result = DB::connection('inventory')->transaction(function () use ($transfer) {
-            $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
+        $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
 
-            if ($transfer->status !== 'pending') {
-                return 'This transfer has already been processed.';
-            }
-
-            if ($transfer->requested_by === auth()->id()) {
-                return 'You cannot reject your own transfer request.';
-            }
-
+        if (! $transfer) {
+            $result = 'This transfer no longer exists.';
+        } elseif ($transfer->status !== 'pending') {
+            $result = 'This transfer has already been processed.';
+        } elseif ($transfer->requested_by === auth()->id()) {
+            $result = 'You cannot reject your own transfer request.';
+        } else {
             $transfer->update(['status' => 'rejected']);
-
-            return true;
-        });
+            $result = true;
+        }
 
         if ($result === true) {
             return back()->with('success', 'Transfer rejected.');
@@ -253,21 +252,18 @@ class StockTransferController extends Controller
 
     public function cancel(StockTransfer $transfer)
     {
-        $result = DB::connection('inventory')->transaction(function () use ($transfer) {
-            $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
+        $transfer = StockTransfer::lockForUpdate()->find($transfer->id);
 
-            if ($transfer->status !== 'pending') {
-                return 'Only pending transfers can be cancelled.';
-            }
-
-            if ($transfer->requested_by !== auth()->id()) {
-                return 'You can only cancel your own transfer requests.';
-            }
-
+        if (! $transfer) {
+            $result = 'This transfer no longer exists.';
+        } elseif ($transfer->status !== 'pending') {
+            $result = 'Only pending transfers can be cancelled.';
+        } elseif ($transfer->requested_by !== auth()->id()) {
+            $result = 'You can only cancel your own transfer requests.';
+        } else {
             $transfer->update(['status' => 'cancelled']);
-
-            return true;
-        });
+            $result = true;
+        }
 
         if ($result === true) {
             return back()->with('success', 'Transfer request cancelled.');

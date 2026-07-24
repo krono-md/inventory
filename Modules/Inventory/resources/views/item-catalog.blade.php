@@ -141,7 +141,7 @@
                             <td style="text-align:center;padding:12px 4px;font-size:13px;color:#132B52;">{{ $item['sku'] ?? '—' }}</td>
                             <td style="text-align:center;padding:12px 4px;font-size:13px;color:#132B52;">{{ $item['name'] }}</td>
                             <td style="text-align:center;padding:12px 4px;font-size:13px;color:#5B7A9D;">{{ $item['category'] }}</td>
-                            <td style="text-align:center;padding:12px 4px;font-size:13px;color:#132B52;font-weight:600;">{{ $item['total_stock'] }}</td>
+                            <td style="text-align:center;padding:12px 4px;font-size:13px;color:#132B52;font-weight:600;">{{ $item['total_available'] }}</td>
                             <td style="text-align:center;padding:12px 4px;font-size:13px;color:#132B52;">&#8369;{{ number_format($item['unit_cost'] ?? 0, 2) }}</td>
                             <td style="text-align:center;padding:12px 8px;">
                                 @php
@@ -170,7 +170,7 @@
                                         @forelse ($item['stock_breakdown'] ?? [] as $row)
                                         <tr style="border-bottom:1px solid #e2e8f0;background:#ffffff;">
                                             <td style="padding:8px 10px;font-size:12px;color:#0f172a;">{{ $row['warehouse'] }}</td>
-                                            <td style="text-align:center;padding:8px 10px;font-size:12px;color:#0f172a;font-weight:600;">{{ $row['on_hand'] }}</td>
+                                            <td style="text-align:center;padding:8px 10px;font-size:12px;color:#0f172a;font-weight:600;">{{ $row['available'] }}</td>
                                             <td style="text-align:center;padding:8px 10px;font-size:12px;color:#dc2626;">{{ $row['reserved'] }}</td>
                                             <td style="padding:6px 10px;" onclick="event.stopPropagation()">
                                                 <form method="POST" action="{{ route('inventory.stock-levels.update', $row['stock_level_id']) }}" style="display:inline-flex;align-items:center;gap:4px;">
